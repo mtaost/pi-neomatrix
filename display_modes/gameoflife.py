@@ -19,6 +19,8 @@ class GameOfLife(module.Module):
         self.red = 240
         self.green = 0
         self.blue = 0
+        self.cycleCount = 0
+        self.prevChanges = 0
 
     def randomize(self):
         for x in range(self.width):
@@ -27,10 +29,22 @@ class GameOfLife(module.Module):
     
     def advanceState(self):
         nextState = [list([0 for i in range(self.height)]) for j in range(self.width)]
+        count = 0
         for i in range(self.width):
             for j in range(self.height):
-                nextState[i][j] = self.aliveCell(i,j)
+                nextState[i][j], change = self.aliveCell(i,j)
+                count += change
         self.state = nextState
+        self.detectCycle(count)
+
+    def detectCycle(self, changes):
+        if changes == self.prevChanges:
+            self.cycleCount += 1
+        else:
+            self.cycleCount = 0
+            self.prevChanges = changes
+        if self.cycleCount == 50:
+            self.randomize()
     
     def aliveCell(self, row, col):
         currCell = self.state[row][col]
@@ -56,7 +70,14 @@ class GameOfLife(module.Module):
                 for j in range (-1, 2):
                     if self.state[i + row][j + col]:
                         count += 1
-        return 1 if (currCell and (count == 3 or count == 4)) or (not currCell and count == 3) else 0
+        if currCell:
+            if count == 3 or count == 4:
+                return (1, 0)
+            return (0, 1)
+        else:
+            if count == 3:
+                return (1, 1)
+            return (0, 0)
 
     def display(self):
         RAINBOW = (self.red, self.green, self.blue)
