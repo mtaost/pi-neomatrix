@@ -36,17 +36,17 @@ class SpectrumAnalyzer(module.Module):
                         frames_per_buffer = self.chunk,
                         input_device_index = self.device)
 
-    def __generate_bins__(self, n_bins):
+    def _generate_bins(self, n_bins):
         x = 625**(1/float(n_bins))
         bins = [int(32*x**n) for n in range(0, n_bins + 1)]
         return bins
            
-    def __calculate_levels__(self, data, chunk, sample_rate):
+    def _calculate_levels(self, data, chunk, sample_rate):
            # Return power array index corresponding to a particular frequency
         def piff(val):
             return int(self.chunk*val/self.sample_rate)
 
-        bins = self.__generate_bins__(self.driver.width)
+        bins = self._generate_bins(self.driver.width)
         # Weighting to account for difference between linear response of microphone vs non-linear response of human ears
         weighting = [1, 1, 1, 2, 3, 4, 4, 4, 8, 8, 8, 16, 16, 16, 16, 16]
         matrix = [None] * 16
@@ -79,7 +79,7 @@ class SpectrumAnalyzer(module.Module):
         # print(matrix)
         return matrix
 
-    def __generate_spectrums__(self):
+    def _generate_spectrums(self):
         """ Returns a list of fun spectrum colors to pick from """ 
         spectrum_GYR = [None] * 16
         spectrum_GYR[0:10] = [(0, 255, 0)] * 11
@@ -88,7 +88,7 @@ class SpectrumAnalyzer(module.Module):
         return list([spectrum_GYR])
 
     def run(self):
-        spectrums = self.__generate_spectrums__()
+        spectrums = self._generate_spectrums()
         # print(spectrums)
 
         # Main loop
@@ -98,8 +98,7 @@ class SpectrumAnalyzer(module.Module):
             data = self.stream.read(self.chunk, exception_on_overflow=False)
 
             # Process data into a display matrix
-            matrix = self.__calculate_levels__(data, self.chunk,self.sample_rate)
-
+            matrix = self._calculate_levels(data, self.chunk,self.sample_rate)
 
             self.driver.clear(self.image)
             for x in range (len(matrix)):
