@@ -1,5 +1,6 @@
 import display_modes.gameoflife
 import display_modes.spectrumanalyzer
+import display_modes.imageviewer
 import display_modes.module
 import driver
 import threading
@@ -16,7 +17,7 @@ def main():
     global moduleThread
     moduleThread = 0
     matrix_driver = driver.MatrixDriver()
-    matrix_driver.set_brightness(0.10)
+    matrix_driver.set_brightness(0.1)
     while 1:
         a = input()
         if a == '1':
@@ -28,6 +29,11 @@ def main():
             stopThread()
             spectrum = display_modes.spectrumanalyzer.SpectrumAnalyzer(matrix_driver)
             moduleThread = threading.Thread(target=spectrum.run, daemon=True)
+            moduleThread.start()
+        elif a[0] == '3':
+            stopThread()
+            viewer = display_modes.imageviewer.ImageViewer(matrix_driver, a[2:])
+            moduleThread = threading.Thread(target=viewer.run, daemon=True)
             moduleThread.start()
         else:
             stopThread()

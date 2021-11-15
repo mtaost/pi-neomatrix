@@ -87,20 +87,9 @@ if __name__ == "__main__":
     #     matrix_driver.display(img)
     
 
-    with Image.open("shrek.gif") as img:
         # img.seek(1000) # skip to the second frame
-        frame = 1000
-        while 1:
-            frame += 1
-            # for frame in range (img.n_frames):
-            img.seek(frame)
-            rgb_img = img.convert('RGB')
-            resized = rgb_img.resize((16,16))
-            matrix_driver.display(resized)
-            time.sleep(0.065)
-    time.sleep(15)
 
-    pixels = img.load()
+    # pixels = img.load()
     # for x in range(16):
     #     for y in range(16):
     #         # print(pixels[x,y])
