@@ -1,3 +1,2 @@
-pyaudio
 adafruit-circuitpython-neopixel
 numpy

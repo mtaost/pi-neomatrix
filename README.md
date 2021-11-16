@@ -1,20 +1,27 @@
 # pi-neomatrix
 multipurpose LED display driven by raspberry pi
 # Features
-# Setup
-## Hardware ##
-Raspberry Pi 3 B+
-HW-221 Level shifter
-16x16 WS2812 matrix
+## Hardware Setup##
+Required hardware:
 
+- Raspberry Pi 3 B+
+- HW-221 Level shifter
+- 16x16 WS2812 matrix
+- INMP441 I2S MEMS Microphone
+- BH1750 Light sensor 
 
-## Sofware ##
-OS: Raspian OS Lite server, enable ssh, I2C, SPI, GPIO, docker
+## Sofware Setup ##
+To get started, set up a Raspberry Pi using the Raspian lite OS and connect it to your network using `raspiconfig`. In raspiconfig, go to interface and enable SSH, I2C, and SPI. 
+
+Run `sudo apt-get update` to update the OS and then ensure SSH access before disconnecting the Raspberry Pi from your display. 
 
 Numpy for raspberry pi
 sudo apt-get install libopenjp2-7
 
-pyaudio
+Setting up the I2S microphone:
+https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
+
+Installing pyaudio:
 install portaudio through website
 sudo apt-get install python3-dev
 sudo git clone http://people.csail.mit.edu/hubert/git/pyaudio.git
@@ -34,6 +41,4 @@ sudo pip install pyaudio
 After that, I was able to use pyaudio.
 
 Pillow
-
-https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
 
