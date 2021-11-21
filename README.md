@@ -1,7 +1,7 @@
 # pi-neomatrix
 multipurpose LED display driven by raspberry pi
 # Features
-## Hardware Setup##
+## Hardware Setup ##
 Required hardware:
 
 - Raspberry Pi 3 B+
@@ -11,9 +11,12 @@ Required hardware:
 - BH1750 Light sensor 
 
 ## Sofware Setup ##
-To get started, set up a Raspberry Pi using the Raspian lite OS and connect it to your network using `raspiconfig`. In raspiconfig, go to interface and enable SSH, I2C, and SPI. 
+To get started, set up a Raspberry Pi using the Raspian lite OS and connect it to your network using `raspi-config`. In raspi-config, go to interface and enable SSH, I2C, and SPI, then connect to WiFi.
 
-Run `sudo apt-get update` to update the OS and then ensure SSH access before disconnecting the Raspberry Pi from your display. 
+Run `sudo apt-get update` to update the OS and then ensure SSH access before disconnecting the Raspberry Pi from your display if you wish to use the device remotely. 
+Run `sudo apt install python3-pip` to get pip 
+
+`sudo pip3 install -r requirements.txt`
 
 Numpy for raspberry pi
 sudo apt-get install libopenjp2-7
@@ -22,23 +25,9 @@ Setting up the I2S microphone:
 https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
 
 Installing pyaudio:
-install portaudio through website
-sudo apt-get install python3-dev
-sudo git clone http://people.csail.mit.edu/hubert/git/pyaudio.git
-sudo apt-get install libportaudio0 libportaudio2 libportaudiocpp0 portaudio19-dev
-What you need to do:
-
-Uninstall python-pyaudio with sudo apt-get purge --remove python-pyaudio if you have it (This is version 0.2.8)
-Download the latest version (19) of PortAudio.
-Untar and install PortAudio
-./configure
-make
-make install
-Get the dependencies for pyaudio
-portaudio19-dev
-python-all-dev (python3-all-dev for Python 3)
-sudo pip install pyaudio
-After that, I was able to use pyaudio.
-
-Pillow
-
+$ sudo apt-get install git
+$ git clone http://people.csail.mit.edu/hubert/git/pyaudio.git
+$ sudo apt-get install libportaudio0 libportaudio2 libportaudiocpp0 portaudio19-dev
+$ sudo apt-get install python-dev
+$ cd pyaudio
+$ sudo python setup.py install

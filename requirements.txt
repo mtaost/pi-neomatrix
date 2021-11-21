@@ -1,2 +1,4 @@
 adafruit-circuitpython-neopixel
 numpy
+rpi_ws281x
+pillow
