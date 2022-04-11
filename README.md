@@ -1,7 +1,7 @@
 # pi-neomatrix
 Multipurpose LED display driven by Raspberry Pi
 
-![alt text](https://raw.githubusercontent.com/mtaost/pi-neomatrix/doc-dev/repo_images/board_4.jpg "Logo Title Text 1")
+![alt text](https://raw.githubusercontent.com/mtaost/pi-neomatrix/master/repo_images/board_4.jpg "In progress display")
 
 This project attempts to be different from other matrix display projects by being flexible in adding new displays and accomodating different hardware setups. The library also provides a locally hosted website to allow remote control of the device. Currently developed modules include: 
 
