@@ -8,7 +8,8 @@ Required hardware:
 - HW-221 Level shifter
 - 16x16 WS2812 matrix
 - INMP441 I2S MEMS Microphone
-- BH1750 Light sensor 
+- BH1750 Light sensor
+- MLX90640 IR Thermal Camera
 
 ## Sofware Setup ##
 To get started, set up a Raspberry Pi using the Raspian lite OS and connect it to your network using `raspi-config`. In raspi-config, go to interface and enable SSH, I2C, and SPI, then connect to WiFi.
