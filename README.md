@@ -1,6 +1,17 @@
 # pi-neomatrix
-multipurpose LED display driven by raspberry pi
-# Features
+Multipurpose LED display driven by Raspberry Pi
+
+![alt text](https://raw.githubusercontent.com/mtaost/pi-neomatrix/doc-dev/repo_images/board_4.jpg "Logo Title Text 1")
+
+This project attempts to be different from other matrix display projects by being flexible in adding new displays and accomodating different hardware setups. The library also provides a locally hosted website to allow remote control of the device. Currently developed modules include: 
+
+- Image viewer supporting gifs
+- Game of life
+- Pixel rain display
+- FFT audio spectrum analyzer
+- Thermal camera
+
+
 ## Hardware Setup ##
 Required hardware:
 
@@ -20,15 +31,19 @@ Run `sudo apt install python3-pip` to get pip
 `sudo pip3 install -r requirements.txt`
 
 Numpy for raspberry pi
-sudo apt-get install libopenjp2-7
+```bash
+$ sudo apt-get install libopenjp2-7
+```
 
 Setting up the I2S microphone:
 https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
 
 Installing pyaudio:
+```bash
 $ sudo apt-get install git
 $ git clone http://people.csail.mit.edu/hubert/git/pyaudio.git
 $ sudo apt-get install libportaudio0 libportaudio2 libportaudiocpp0 portaudio19-dev
 $ sudo apt-get install python-dev
 $ cd pyaudio
 $ sudo python setup.py install
+```
