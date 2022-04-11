@@ -1,6 +1,9 @@
+
 import display_modes.gameoflife
 import display_modes.spectrumanalyzer
 import display_modes.imageviewer
+import display_modes.thermalcamera
+import display_modes.pixelrain
 import display_modes.module
 import driver
 import threading
@@ -34,6 +37,16 @@ def main():
             stopThread()
             viewer = display_modes.imageviewer.ImageViewer(matrix_driver, a[2:])
             moduleThread = threading.Thread(target=viewer.run, daemon=True)
+            moduleThread.start()
+        elif a == '4':
+            stopThread()
+            camera = display_modes.thermalcamera.ThermalCamera(matrix_driver)
+            moduleThread = threading.Thread(target=camera.run, daemon=True)
+            moduleThread.start()
+        elif a == '5':
+            stopThread()
+            rain = display_modes.pixelrain.PixelRain(matrix_driver)
+            moduleThread = threading.Thread(target=rain.run, daemon=True)
             moduleThread.start()
         else:
             stopThread()
