@@ -18,6 +18,7 @@ def generate_map():
     result = np.flip(ABCD, (1))
     return result
 
+
 class MatrixDriver():
     """ MatrixDriver is an abstraction for the Adafruit Neopixel library 
         Provides modules a width by height 3-tuple input to drive a matrix"""
@@ -51,7 +52,7 @@ class MatrixDriver():
         for x in range(self.width):
             for y in range(self.height):
                 index = self.index_map[x, y]
-                self.pixels[index] = (self.__scale_brightness__((pixel_data_matrix[x, y])))
+                self.pixels[index] = (self._scale_brightness((pixel_data_matrix[x, y])))
 
         self.pixels.show()
 
@@ -69,7 +70,7 @@ class MatrixDriver():
             b = 0.0
         self.__brightness__ = b
 
-    def __scale_brightness__(self, color_tuple: tuple):
+    def _scale_brightness(self, color_tuple: tuple):
         return tuple(int(i * self.__brightness__) for i in color_tuple)
 
     def stop(self):

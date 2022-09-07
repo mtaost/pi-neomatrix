@@ -3,20 +3,24 @@ from PIL import Image
 from display_modes import module
 from numpy import linspace
 from datetime import datetime
-from time import sleep
+from time import sleep, time
 import random
 
 class PixelRain(module.Module):
     """Pixel rain, rainbow or other colors"""
 
-    DELAY_MS = 10
-    PERSISTENCE = 0.80
-    DENSITY_PERCENT = 1
+    DELAY_MS = 20
+    PERSISTENCE = 0.7 # Percent persistence of falling pixels per shift
+    DENSITY = 60 # Number from 1 to 1000 indicating spawn rates at first layer
+    MIN_BRIGHTNESS = 0.01
+    RANDOM_COLOR_SELECTION = False
 
     def __init__(self, driver):
         super().__init__(driver)
-        self.color_pallete = self._generate_rainbow_colors(30)
-        self.color_pallete = [(0, 0, 255)]
+        self.color_pallete = self._generate_rainbow_colors(1000)
+        # self.color_pallete = [(252, 3, 240), (173, 3, 252), (3, 86, 252), (78, 3, 252), (194, 3, 252)]
+        self.brightness_choices = linspace(self.MIN_BRIGHTNESS, 1.0, 20)
+        # self.color_pallete = [(0, 0, 255)]
         random.seed(datetime.now())
         self.color_index = 0
 
@@ -55,22 +59,31 @@ class PixelRain(module.Module):
         for y in reversed(range(1, self.height)):
             for x in range(0, self.width):
                 self.pixels[x, y] = self.pixels[x, y - 1]
-                self.pixels[x, y - 1] = tuple([int(x * self.PERSISTENCE) for x in self.pixels[x, y - 1]])
+                self.pixels[x, y - 1] = self._scale_brightness(self.pixels[x, y - 1], self.PERSISTENCE)
 
     # Place colors along top of matrix, selecting from color pallete and
     # based on DENSITY
     def _place_pixels(self):
         for x in range(0, self.width):
-            if random.randint(0, 99) < self.DENSITY_PERCENT:
-                # self.pixels[x, 0] = random.choice(self.color_pallete)
-                self.pixels[x, 0] = self.color_pallete[self.color_index]
-                self.color_index += 1
-                if self.color_index == len(self.color_pallete):
-                    self.color_index = 0
+            if random.randint(0, 999) < self.DENSITY:
+                brightness = random.choice(self.brightness_choices)
+                if self.RANDOM_COLOR_SELECTION:
+                    self.pixels[x, 0] = self._scale_brightness(random.choice(self.color_pallete), brightness)
+                
+                else:
+                    self.pixels[x, 0] = self._scale_brightness(self.color_pallete[self.color_index], brightness)
+                    self.color_index += 1
+                    if self.color_index == len(self.color_pallete):
+                        self.color_index = 0
+        
+    def _scale_brightness(self, color_tuple: tuple, brightness ):
+        return tuple(int(i * brightness) for i in color_tuple)
 
     def run(self):
         while 1:
+            start = time()
             self._place_pixels()
             self.display()
             self._shift_down()
             sleep(self.DELAY_MS/1000)
+            # print(f"FPS: {1/(time() - start):.1f}")

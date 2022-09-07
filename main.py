@@ -20,7 +20,7 @@ def main():
     global moduleThread
     moduleThread = 0
     matrix_driver = driver.MatrixDriver()
-    matrix_driver.set_brightness(0.1)
+    matrix_driver.set_brightness(0.25)
     while 1:
         a = input()
         if a == '1':
