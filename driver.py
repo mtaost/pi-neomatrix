@@ -5,8 +5,9 @@ import time
 from timeit import timeit
 from PIL import Image
 
-def generate_map():
-    """ Returns a mapping array to translate a x and y coordinate into an index"""
+
+def generate_map_test_display():
+    # Returns a mapping array to translate a x and y coordinate into an index
     A = np.reshape([list(range(64))], (8,8))
     B = np.reshape([list(range(64, 128))], (8,8))
     C = np.reshape([list(range(128, 192))], (8,8))
@@ -17,6 +18,20 @@ def generate_map():
     # ABCD = np.rot90(ABCD, 1)
     result = np.flip(ABCD, (1))
     return result
+
+def generate_map_fullsize_display(rows: int = 16, cols: int = 16, start: int = 0):
+    """ Return list of lists of ints, starting with start, increasing by one,
+    with odd-numbered rows increasing from right to left.
+    Code 
+    """
+    if rows == 0:
+        return []
+    filter_e = np.array([[i % 2 == 0] for i in range(rows)])
+    filter_o = np.invert(filter_e)
+    result_e = np.arange(start, start+rows*cols).reshape(rows, cols)
+    arr = np.array((result_e * filter_e + np.fliplr(result_e) * filter_o).tolist())
+    arr = np.rot90(arr, -1)
+    return arr
 
 
 class MatrixDriver():
@@ -35,7 +50,7 @@ class MatrixDriver():
         self.width = width
         self.height = height
         self.order = order
-        self.index_map = generate_map()
+        self.index_map = generate_map_fullsize_display()
 
         self.__brightness__ = 0.25
         self.pixels = neopixel.NeoPixel(pin, width * height, auto_write=False, pixel_order=order)

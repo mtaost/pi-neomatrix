@@ -37,13 +37,4 @@ $ sudo apt-get install libopenjp2-7
 
 Setting up the I2S microphone:
 https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
-
-Installing pyaudio:
-```bash
-$ sudo apt-get install git
-$ git clone http://people.csail.mit.edu/hubert/git/pyaudio.git
-$ sudo apt-get install libportaudio0 libportaudio2 libportaudiocpp0 portaudio19-dev
-$ sudo apt-get install python-dev
-$ cd pyaudio
-$ sudo python setup.py install
-```
+https://makersportal.com/shop/i2s-mems-microphone-for-raspberry-pi-inmp441

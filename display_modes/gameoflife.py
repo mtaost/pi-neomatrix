@@ -21,6 +21,8 @@ class GameOfLife(module.Module):
         self.blue = 0
         self.cycleCount = 0
         self.prevChanges = 0
+        self.colorstep = 10
+        self.delay = 0.05
 
     def randomize(self):
         for x in range(self.width):
@@ -82,15 +84,15 @@ class GameOfLife(module.Module):
     def display(self):
         RAINBOW = (self.red, self.green, self.blue)
         if self.red > 0 and self.blue == 0:
-            self.red -= 20
-            self.green += 20
+            self.red -= self.colorstep
+            self.green += self.colorstep
         else:
             if self.green > 0:
-                self.green -= 20
-                self.blue += 20
+                self.green -= self.colorstep
+                self.blue += self.colorstep
             else:
-                self.blue -= 20
-                self.red += 20
+                self.blue -= self.colorstep
+                self.red += self.colorstep
         for x in range(self.width):
             for y in range(self.height):
                 self.pixels[x,y] = RAINBOW if self.state[x][y] else GameOfLife.DEAD
@@ -100,7 +102,7 @@ class GameOfLife(module.Module):
         self.display()
         time.sleep(0.5)
         while 1:
-            time.sleep(0.2)
+            time.sleep(self.delay)
             self.advanceState()
             self.display()
 

@@ -8,19 +8,16 @@ import random
 
 class PixelRain(module.Module):
     """Pixel rain, rainbow or other colors"""
-
-    DELAY_MS = 20
-    PERSISTENCE = 0.7 # Percent persistence of falling pixels per shift
-    DENSITY = 60 # Number from 1 to 1000 indicating spawn rates at first layer
+    DELAY_MS = 50
+    PERSISTENCE = 0.75 # Percent persistence of falling pixels per shift
+    DENSITY = 100 # Number from 1 to 1000 indicating spawn rates at first layer
     MIN_BRIGHTNESS = 0.01
     RANDOM_COLOR_SELECTION = False
 
     def __init__(self, driver):
         super().__init__(driver)
         self.color_pallete = self._generate_rainbow_colors(1000)
-        # self.color_pallete = [(252, 3, 240), (173, 3, 252), (3, 86, 252), (78, 3, 252), (194, 3, 252)]
         self.brightness_choices = linspace(self.MIN_BRIGHTNESS, 1.0, 20)
-        # self.color_pallete = [(0, 0, 255)]
         random.seed(datetime.now())
         self.color_index = 0
 
