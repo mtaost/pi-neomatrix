@@ -3,11 +3,12 @@ from display_modes import module
 from datetime import datetime
 import time
 
+
 class GameOfLife(module.Module):
     """Life"""
 
-    ALIVE = (150,50,150)
-    DEAD = (0,0,0)
+    ALIVE = (150, 50, 150)
+    DEAD = (0, 0, 0)
 
     def __init__(self, driver):
         if driver.width != 16 or driver.height != 16:
@@ -95,7 +96,7 @@ class GameOfLife(module.Module):
                 self.red += self.colorstep
         for x in range(self.width):
             for y in range(self.height):
-                self.pixels[x,y] = RAINBOW if self.state[x][y] else GameOfLife.DEAD
+                self.pixels[x, y] = RAINBOW if self.state[x][y] else GameOfLife.DEAD
         super().display()
     
     def run(self):
@@ -105,8 +106,3 @@ class GameOfLife(module.Module):
             time.sleep(self.delay)
             self.advanceState()
             self.display()
-
-
-    
-
-

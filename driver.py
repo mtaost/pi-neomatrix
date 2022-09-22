@@ -39,20 +39,14 @@ class MatrixDriver():
         Provides modules a width by height 3-tuple input to drive a matrix"""
 
     """ Change parameters here to adjust for your setup"""
-    def __init__(self, 
-        pin = board.D12,
-        width = 16,
-        height = 16,
-        order = neopixel.GRB
-        ):
-        
+    def __init__(self, pin=board.D12, width=16, height=16, order=neopixel.GRB):
         self.pin = pin
         self.width = width
         self.height = height
         self.order = order
         self.index_map = generate_map_fullsize_display()
 
-        self.__brightness__ = 0.25
+        self.brightness = 0.25
         self.pixels = neopixel.NeoPixel(pin, width * height, auto_write=False, pixel_order=order)
 
     def display(self, img):
@@ -83,10 +77,10 @@ class MatrixDriver():
             b = 1.0
         elif (b < 0.0):
             b = 0.0
-        self.__brightness__ = b
+        self.brightness = b
 
     def _scale_brightness(self, color_tuple: tuple):
-        return tuple(int(i * self.__brightness__) for i in color_tuple)
+        return tuple(int(i * self.brightness) for i in color_tuple)
 
     def stop(self):
         self.pixels.deinit()

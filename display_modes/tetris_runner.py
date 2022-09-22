@@ -1,18 +1,12 @@
 from typing import List
 from collections import deque
+from time import sleep
 import random
 import subprocess
-import logging
 import colorlog
 from copy import deepcopy
 
-handler = colorlog.StreamHandler()
-handler.setFormatter(colorlog.ColoredFormatter(
-    '%(log_color)s%(levelname)s %(name)s: %(message)s'))
-
-logger = colorlog.getLogger()
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+logger = colorlog.getLogger(__name__)
 
 
 class TetrisGame():
@@ -44,6 +38,14 @@ class TetrisGame():
     def get_bot_board(self) -> str:
         return self.bot_board
 
+    def add_garbage(self, num_lines: int) -> None:
+        """ Adds num_lines of garbage to the board """
+        # Algorithm to generate garbage 
+
+        # Add lines to bottom of board
+
+        # Update bot board representation
+
     def update_bot_board(self, board: str, lines_cleared: int) -> None:
         """ Gets the board state from the bot and updates both board representations """
 
@@ -64,28 +66,29 @@ class TetrisGame():
                 if next_state_bot[rowIndex][colIndex] != '0':
                     # If this is a new piece, ie current internal state does not have this occupied
                     if self.internal_board[rowIndex][colIndex] == '-':
-                        # Then this is the newly placed piece, we mark it as such 
+                        # Then this is the newly placed piece, we mark it as such
                         self.internal_board[rowIndex][colIndex] = self.this_piece
 
         # After everything is processed, set bot_board to the correct representation
         self.bot_board = self._convert_to_bot_board(self.internal_board)
         # print("bot board: " + self.bot_board)
         # self.print_bot_board()
-        self.print_internal_board()
+        # self.print_internal_board()
         # self.print_bot_board()
 
     def _clear_lines(self, num_lines: int):
         """ Searches for any full lines and clears them """
-        logger.info("clear lines")
-        # self.print_internal_board()
-        # print("----\n")
-        # for rowIndex, row in enumerate(self.internal_board):
-        #     if '-' not in row:
-        #         # Shift down all rows above
-        #         for i in range(rowIndex, 1, -1):
-        #             self.internal_board[rowIndex-i] = self.internal_board[i]
-
         new_line = ['-'] * 10
+        # self.print_bot_board()
+        # for row in list(self.internal_board):
+        #     print(row)
+        #     if '-' not in row:
+        #         self.internal_board.remove(row)
+        #         logger.warn(f"Removed {row}, examine board state below")
+        #         self.print_bot_board()
+        #         self.internal_board.appendleft(deepcopy(new_line))
+        #         num_lines -= 1
+        #         logger.warn("Removed floating line")
 
         for _ in range(num_lines):
             self.internal_board.pop()
@@ -178,7 +181,7 @@ class MisaMinoRunner():
         self._read()
         logger.info(f"bot_command: {command}")
 
-        command = "settings level 10"
+        command = "settings level 5"
         self._write(command)
         self._read()
         logger.info(f"bot_command: {command}")
@@ -203,9 +206,9 @@ class MisaMinoRunner():
         self._write(command)
         logger.info(f"bot_command: {command[0:38]}...{command[-20:]}")
 
-    def _step_bot(self) -> None:
+    def step_bot(self) -> None:
         # Send command to bot
-        command = "action2 moves 10000"
+        command = "action2 moves 1"
         self._write(command)
         logger.info(f"bot_command: {command}")
 
@@ -239,7 +242,7 @@ class MisaMinoRunner():
         self.bot_proc.stdin.write(f"{message.strip()}\n".encode("utf-8"))
         self.bot_proc.stdin.flush()
 
-    def _kill_bot(self) -> None:
+    def kill_bot(self) -> None:
         self.bot_proc.stdin.close()
         self.bot_proc.terminate()
         self.bot_proc.wait(timeout=0.2)
@@ -258,5 +261,5 @@ if __name__ == "__main__":
 
     bot_runner = MisaMinoRunner()
     for _ in range(50):
-        bot_runner._step_bot()
+        bot_runner.step_bot()
     bot_runner._kill_bot()

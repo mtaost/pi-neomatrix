@@ -5,7 +5,7 @@ import display_modes.thermalcamera
 import display_modes.pixelrain
 import display_modes.module
 import display_modes.displayoff
-# import display_modes
+import display_modes.tetrisplayer
 import driver
 import threading
 import logging
@@ -60,6 +60,11 @@ def main():
             stopThread()
             rain = display_modes.pixelrain.PixelRain(matrix_driver)
             moduleThread = threading.Thread(target=rain.run, daemon=True)
+            moduleThread.start()
+        elif a == '6':
+            stopThread()
+            tetris = display_modes.tetrisplayer.TetrisPlayer(matrix_driver)
+            moduleThread = threading.Thread(target=tetris.run, daemon=True)
             moduleThread.start()
         else:
             stopThread()

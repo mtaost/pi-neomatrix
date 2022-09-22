@@ -2,6 +2,7 @@ import driver
 from PIL import Image
 import sys
 
+
 class Module:
     """Base class of modules for pixel displays"""
 
@@ -11,7 +12,7 @@ class Module:
         self.width = driver.width
         self.height = driver.height
         self.driver = driver
-        self.image = Image.new('RGB', (self.width,self.height), 'black')
+        self.image = Image.new('RGB', (self.width, self.height), 'black')
         self.pixels = self.image.load()
 
     def display(self):

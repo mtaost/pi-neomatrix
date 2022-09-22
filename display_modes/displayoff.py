@@ -1,7 +1,5 @@
-import driver
 from PIL import Image
 from display_modes import module
-import sys
 
 
 class DisplayOff(module.Module):
