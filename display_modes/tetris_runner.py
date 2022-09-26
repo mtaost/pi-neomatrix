@@ -176,12 +176,12 @@ class MisaMinoRunner():
         self._write(command)
         logger.info(f"bot_command: {command}")
 
-        command = "settings style 3"
+        command = "settings style 4"
         self._write(command)
         self._read()
         logger.info(f"bot_command: {command}")
 
-        command = "settings level 5"
+        command = "settings level 1"
         self._write(command)
         self._read()
         logger.info(f"bot_command: {command}")

@@ -6,10 +6,12 @@ import display_modes.pixelrain
 import display_modes.module
 import display_modes.displayoff
 import display_modes.tetrisplayer
+import display_modes.pixelstars
 import driver
 import threading
 import logging
 import colorlog
+import argparse
 
 handler = colorlog.StreamHandler()
 handler.setFormatter(colorlog.ColoredFormatter(
@@ -30,41 +32,57 @@ def stopThread():
 
 
 def main():
+    parser = argparse.ArgumentParser(description='neomatrix runner')
+    parser.add_argument('integers', metavar='N', type=int, nargs='?',
+                        help='display mode', default=-1)
+    args = parser.parse_args()
+    input_arg = args.integers
+
     global moduleThread
     moduleThread = 0
     matrix_driver = driver.MatrixDriver()
     matrix_driver.set_brightness(1.0)
     while 1:
-        a = input()
-        if a == '1':
+        if input_arg != -1:
+            mode_selection = str(input_arg)
+            input_arg = -1
+        else:
+            mode_selection = input()
+
+        if mode_selection == '1':
             stopThread()
             life = display_modes.gameoflife.GameOfLife(matrix_driver)
             moduleThread = threading.Thread(target=life.run, daemon=True)
             moduleThread.start()
-        elif a == '2':
+        elif mode_selection == '2':
             stopThread()
             spectrum = display_modes.spectrumanalyzer.SpectrumAnalyzer(matrix_driver)
             moduleThread = threading.Thread(target=spectrum.run, daemon=True)
             moduleThread.start()
-        elif a[0] == '3':
+        elif mode_selection[0] == '3':
             stopThread()
-            viewer = display_modes.imageviewer.ImageViewer(matrix_driver, a[2:])
+            viewer = display_modes.imageviewer.ImageViewer(matrix_driver, mode_selection[2:])
             moduleThread = threading.Thread(target=viewer.run, daemon=True)
             moduleThread.start()
-        elif a == '4':
+        elif mode_selection == '4':
             stopThread()
             camera = display_modes.thermalcamera.ThermalCamera(matrix_driver)
             moduleThread = threading.Thread(target=camera.run, daemon=True)
             moduleThread.start()
-        elif a == '5':
+        elif mode_selection == '5':
             stopThread()
             rain = display_modes.pixelrain.PixelRain(matrix_driver)
             moduleThread = threading.Thread(target=rain.run, daemon=True)
             moduleThread.start()
-        elif a == '6':
+        elif mode_selection == '6':
             stopThread()
             tetris = display_modes.tetrisplayer.TetrisPlayer(matrix_driver)
             moduleThread = threading.Thread(target=tetris.run, daemon=True)
+            moduleThread.start()
+        elif mode_selection == '7':
+            stopThread()
+            stars = display_modes.pixelstars.PixelStars(matrix_driver)
+            moduleThread = threading.Thread(target=stars.run, daemon=True)
             moduleThread.start()
         else:
             stopThread()
@@ -74,14 +92,13 @@ def main():
 
     life = display_modes.gameoflife.GameOfLife(matrix_driver)
 
-    # x = threading.Thread(target=life.run, daemon=True)
     x = threading.Thread(target=spectrum.run, daemon=True)
     x.start()
-    a = ''
-    while a != '0':
-        a = input()
-        print(a)
-        if a == '0':
+    mode_selection = ''
+    while mode_selection != '0':
+        mode_selection = input()
+        print(mode_selection)
+        if mode_selection == '0':
             display_modes.module.Module.STOP = True
             x.join()
     exit()
