@@ -1,16 +1,48 @@
 # pi-neomatrix
-Multipurpose LED display driven by Raspberry Pi
+Multipurpose 2ft by 2ft LED display driven by Raspberry Pi, capable of showing images, videos, simulations, and other visually pleasing displays!
 
-![alt text](https://raw.githubusercontent.com/mtaost/pi-neomatrix/master/repo_images/board_4.jpg "In progress display")
+There are many pixel displays out there, but not as many which are this large, which required custom electronics and mounting solutions to accommodate a 3cmx3cm pixel size while not making everything a rat's nest of wires.
 
-This project attempts to be different from other matrix display projects by being flexible in adding new displays and accomodating different hardware setups. The library also provides a locally hosted website to allow remote control of the device. Currently developed modules include: 
+![alt text](https://github.com/mtaost/pi-neomatrix/blob/master/repo_images/gol_demo.gif "Display playing Conways Game of Life")
+
+One main goal of the software architecture is to abstract the hardware interactions to a library so one can more easily develop, test, and deploy display modalities. Currently, the display has the following modes developed:
 
 - Image viewer supporting gifs
 - Game of life
 - Pixel rain display
 - FFT audio spectrum analyzer
 - Thermal camera
+- Falling pixels rain
+- Shimmering starry night display
+- Tetris AI bot
 
+Below are gifs showing off the soothing pixel rain, and the slightly chaotic multiplayer Tetris AI bot:
+  
+<img src="https://github.com/mtaost/pi-neomatrix/blob/master/repo_images/rain_demo.gif" alt="Pixel rain" width="800">
+<img src="https://github.com/mtaost/pi-neomatrix/blob/master/repo_images/tetris_demo.gif" alt="Pixel rain" width="800">
+  
+## Construction ##
+The core component of the display is the WS2811/WS2812b LED chip. Known as a NeoPixel to some, this IC allows one to individually control theoretically infinite LEDs through a single wire, though in practice, propogation delays will cause latency issues at larger pixel counts. 
+
+For my display, 16 strips of 16 leds spaced 33mm apart are laid down a plastic backing and snake around to minimize the wires. 
+
+![alt text](https://github.com/mtaost/pi-neomatrix/blob/master/repo_images/board_1.jpg?raw=true "Base board with led strips")
+
+Then, a grid of dividers created using a laser cutter and cardstock is laid on top of the grid to give distinct separation between pixels. 
+
+![alt text](https://github.com/mtaost/pi-neomatrix/blob/master/repo_images/board_4.jpg?raw=true "Dividers")
+
+For this project, 16x16=256 pixels is not enough to worry about refresh rate issues due to high latency between pixels, but it is enough pixels to worry about power consumption.
+
+At full brightness values (255, 255, 255), each pixel can draw 60mA totalling to 15.36A. In practice though, there are few situations where we will be displaying all 256 pixels at max brightness, and some voltage drawdown is acceptable. However, it's important to make sure that pixels do not get less voltage the further they are on the chain
+
+To deliver power evenly to each row, I created a power bus bar sort of layout which has 2 pieces of copper tape that provide +5V and GND to each row of pixels. 
+
+![alt text](https://github.com/mtaost/pi-neomatrix/blob/master/repo_images/board_2.jpg?raw=true "Power bus")
+
+The electronics are held on the back by a combination of DIN rails and 3d printed DIN clips, which neatly hold the power supply, RPi, and other related circuitry in place
+
+![alt text](https://github.com/mtaost/pi-neomatrix/blob/master/repo_images/din_0.jpg?raw=true "DIN Rail")
 
 ## Hardware Setup ##
 Required hardware:
