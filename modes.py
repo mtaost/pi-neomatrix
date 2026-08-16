@@ -1,4 +1,4 @@
-from mode_settings import GAME_OF_LIFE_SETTINGS
+from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -47,6 +47,10 @@ def build_mode_registry():
         from display_modes.pixelstars import PixelStars
         return PixelStars(driver)
 
+    def fireworks(driver, options):
+        from display_modes.fireworks import Fireworks
+        return Fireworks(driver, options)
+
     def tetris(driver, options):
         from display_modes.tetrisplayer import TetrisPlayer
         return TetrisPlayer(driver)
@@ -62,6 +66,7 @@ def build_mode_registry():
         ModeSpec("thermal", "Thermal Camera", thermal, ("mlx90640",)),
         ModeSpec("rain", "Pixel Rain", rain),
         ModeSpec("stars", "Pixel Stars", stars),
+        ModeSpec("fireworks", "Fireworks", fireworks, settings_schema=FIREWORKS_SETTINGS),
         ModeSpec("tetris", "Tetris AI", tetris, ("tetris_ai",)),
         ModeSpec("off", "Display Off", off),
     ]

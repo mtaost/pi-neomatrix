@@ -14,6 +14,20 @@ GAME_OF_LIFE_SETTINGS = {
 }
 
 
+FIREWORKS_SETTINGS = {
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Seconds between frames. Lower values animate faster.", "min": 0.02, "max": 0.2, "step": 0.01, "default": 0.05, "unit": "seconds"},
+    "launch_rate": {"type": "range", "label": "Launch frequency", "help": "Average rocket launches per second.", "min": 0.05, "max": 2.0, "step": 0.05, "default": 0.35, "unit": "launches/sec"},
+    "burst_size": {"type": "range", "label": "Burst size", "help": "Number of particles created when a rocket explodes.", "min": 8, "max": 64, "step": 1, "default": 26, "unit": "particles"},
+    "trail_persistence": {"type": "range", "label": "Trail persistence", "help": "Higher values keep trails visible for longer.", "min": 0.1, "max": 0.95, "step": 0.01, "default": 0.7},
+    "gravity": {"type": "range", "label": "Gravity", "help": "How strongly burst particles fall.", "min": 0.0, "max": 0.2, "step": 0.01, "default": 0.01},
+    "launch_speed": {"type": "range", "label": "Launch speed", "help": "How quickly rockets rise before bursting.", "min": 0.4, "max": 2.0, "step": 0.05, "default": 1.0},
+    "burst_speed": {"type": "range", "label": "Burst speed", "help": "How quickly explosion particles spread.", "min": 0.2, "max": 2.0, "step": 0.05, "default": 0.8},
+    "fade_to_color": {"type": "boolean", "label": "Fade fragments to another color", "help": "Each burst transitions uniformly to a different palette color as it fades.", "default": False},
+
+    "palette": {"type": "select", "label": "Palette", "help": "Choose a curated collection of firework colors.", "default": "classic", "choices": [{"value": "classic", "label": "Classic"}, {"value": "warm", "label": "Warm"}, {"value": "cool", "label": "Cool"}, {"value": "patriotic", "label": "Patriotic"}, {"value": "neon", "label": "Neon"}]},
+}
+
+
 def default_settings(schema):
     return {key: field["default"] for key, field in schema.items()}
 
@@ -42,6 +56,12 @@ def normalize_settings(schema, values=None, base=None):
                 raise ValueError(f"{field['label']} is invalid.")
             result[key] = value
             continue
+        if field_type == "boolean":
+            if not isinstance(value, bool):
+                raise ValueError(f"{field['label']} must be a boolean.")
+            result[key] = value
+            continue
+
         if field_type == "color":
             if not isinstance(value, str) or not HEX_COLOR.fullmatch(value):
                 raise ValueError(f"{field['label']} must be a #RRGGBB color.")

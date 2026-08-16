@@ -68,12 +68,14 @@ function createModeSetting(field, value) {
       input.append(option);
     }
   } else {
-    input.type = field.type === "color" ? "color" : "range";
+    input.type = field.type === "color" ? "color" : field.type === "boolean" ? "checkbox" : "range";
     input.min = field.min;
     input.max = field.max;
     input.step = field.step;
   }
   input.value = value;
+  if (field.type === "boolean") input.checked = Boolean(value);
+
   label.append(input);
   if (field.help) {
     const help = document.createElement("span");
@@ -156,7 +158,7 @@ function createModeCard(mode) {
   launch.onclick = async () => {
     try {
       if (mode.requires_asset && !assetSelect.value) throw new Error("Add an image or GIF to the res directory first.");
-      renderState(await api("/api/mode", {method: "POST", body: JSON.stringify({mode: mode.id, asset_id: assetSelect?.value, settings: Object.fromEntries(Object.entries(settingInputs).map(([key, input]) => [key, input.value]))})}));
+      renderState(await api("/api/mode", {method: "POST", body: JSON.stringify({mode: mode.id, asset_id: assetSelect?.value, settings: Object.fromEntries(Object.entries(settingInputs).map(([key, input]) => [key, input.type === "checkbox" ? input.checked : input.value]))})}));
     } catch (error) { setStatus(error.message, true); }
   };
   card.append(launch);
