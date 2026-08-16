@@ -1,0 +1,15 @@
+[Unit]
+Description=pi-neomatrix mobile display control service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/pi/pi-neomatrix
+ExecStart=/usr/bin/python3 /home/pi/pi-neomatrix/main.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

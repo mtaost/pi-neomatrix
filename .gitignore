@@ -136,3 +136,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Runtime display-controller configuration
+neomatrix-config.json

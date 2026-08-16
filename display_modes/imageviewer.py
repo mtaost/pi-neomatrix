@@ -17,7 +17,7 @@ class ImageViewer(module.Module):
             # print("needs resize" + str(needs_resize))
             if img.is_animated:
                 frame = 0
-                while 1:
+                while not self.should_stop():
                     try:
                         start_time = time.time()
                         img.seek(frame)
@@ -28,10 +28,10 @@ class ImageViewer(module.Module):
                             self.image = self.image.resize((self.width,self.height))
                         self.display()
                         wait_time = self.image.info['duration']/1000 - time.time() + start_time
-                        if wait_time > 0:
-                            time.sleep(wait_time)
+                        if wait_time > 0 and not self.wait(wait_time):
+                            break
                         frame += 1
-                    except Exception as e:
+                    except EOFError:
                         frame = 0
                         continue
             else:

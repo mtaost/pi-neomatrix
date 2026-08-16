@@ -1,37 +1,72 @@
-<!DOCTYPE html>
-   <head>
-      <title>GPIO Control</title>
-      <link rel="stylesheet" href='../static/master.css'/>
-   </head>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeoMatrix Control</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='master.css') }}">
+</head>
+<body data-page="{{ page }}">
+  <main>
+    <header>
+      <div><h1>NeoMatrix</h1><p id="status">Connecting…</p></div>
+      <nav aria-label="Primary navigation">
+        <a href="{{ url_for('index') }}" {% if page == 'display' %}aria-current="page"{% endif %}>Display</a>
+        <a href="{{ url_for('automation') }}" {% if page == 'automation' %}aria-current="page"{% endif %}>Automation</a>
+      </nav>
+    </header>
 
-   <body>
-		<h1>RPi GPIO Control</h1>
-		<h2> Sensor Status </h2>
-		<h3> BUTTON ==>  {{ button  }}</h3>
-		<h3> MOTION ==>  {{ senPIR  }}</h3>
-		<br>
-		
-		<h2> Actuator Status </h2>
-		<h3> RED LED ==>  {{ ledRed  }}</h3>
-		<h3> YLW LED ==>  {{ ledYlw  }}</h3>
-		<h3> GRN LED ==>  {{ ledGrn  }}</h3>
-		<br>
-		<h2> Commands </h2>
-		<h3> 
-			RED LED Ctrl ==> 
-			<a href="/ledRed/on" class="button">TURN ON</a>  
-			<a href="/ledRed/off"class="button">TURN OFF</a>
-		</h3>
-		<h3> 
-			YLW LED Ctrl ==> 
-			<a href="/ledYlw/on" class="button">TURN ON</a>  
-			<a href="/ledYlw/off"class="button">TURN OFF</a>
-		</h3>
-		<h3> 
-			GRN LED Ctrl ==> 
-			<a href="/ledGrn/on" class="button">TURN ON</a>  
-			<a href="/ledGrn/off"class="button">TURN OFF</a>
-		</h3>
-		
-   </body>
+    {% if page == 'display' %}
+    <section class="display-controls" aria-label="Display controls">
+      <button id="power-toggle" class="power-toggle" type="button" aria-label="Turn display off" title="Turn display off" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2v10m6.36-6.36a9 9 0 1 1-12.72 0"/></svg></button>
+      <div class="brightness-control"><span class="brightness-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><label class="sr-only" for="brightness">Brightness</label><input id="brightness" type="range" min="0" max="1" step="0.01"><output id="brightness-value"></output></div>
+    </section>
+    <section aria-labelledby="modes-title">
+      <div class="section-heading"><h2 id="modes-title">Display modes</h2><p>Choose a mode to view its controls and settings.</p></div>
+      <div class="card mode-picker"><label for="mode-select">Display mode<select id="mode-select"></select></label></div>
+      <div id="mode-card"></div>
+    </section>
+    {% else %}
+    <section class="card">
+      <h2>Ambient automation</h2>
+      <p class="muted">When enabled, the BH1750 light sensor can dim the display as the room gets darker and pause it when the room stays dark.</p>
+      <label class="toggle"><input id="automation-enabled" type="checkbox"> Enable ambient sleep and brightness</label>
+      <p class="help">Turning this off leaves the display at the brightness chosen on the Display page and prevents automatic sleeping.</p>
+
+      <section class="settings-section" aria-labelledby="sleep-wake-title">
+        <h3 id="sleep-wake-title">Sleep & wake</h3>
+        <div class="settings-grid">
+          <label>Sleep below lux<input id="sleep-lux" type="number" min="0" step="0.1"><span class="help">Pause the display when the reading stays at or below this light level.</span></label>
+          <label>Wake above lux<input id="wake-lux" type="number" min="0" step="0.1"><span class="help">Resume the display when the reading stays at or above this light level.</span></label>
+          <label>Sleep dwell (seconds)<input id="sleep-dwell" type="number" min="1"><span class="help">How long the room must remain dark before the display pauses.</span></label>
+          <label>Wake dwell (seconds)<input id="wake-dwell" type="number" min="1"><span class="help">How long the room must remain bright before the display resumes.</span></label>
+          <label>Poll interval (seconds)<input id="poll-seconds" type="number" min="1"><span class="help">How often the Pi reads the light sensor. A shorter interval reacts sooner.</span></label>
+        </div>
+      </section>
+
+      <section class="settings-section" aria-labelledby="ambient-brightness-title">
+        <h3 id="ambient-brightness-title">Adaptive brightness</h3>
+        <div class="settings-grid">
+          <label>Minimum brightness<input id="min-brightness" type="number" min="0" max="1" step="0.01"><span class="help">The dimmest output while automation is active. Use a value from 0 to 1.</span></label>
+          <label>Maximum ambient lux<input id="max-lux" type="number" min="1" step="1"><span class="help">At this light level and above, the display uses its full brightness setting.</span></label>
+        </div>
+      </section>
+
+      <section class="settings-section" aria-labelledby="override-title">
+        <h3 id="override-title">Manual changes</h3>
+        <div class="settings-grid">
+          <label>Manual override<select id="override-policy"><option value="timed">Timed override</option><option value="always">Automation always wins</option><option value="manual">Manual until changed</option></select><span class="help">Choose whether a manual power, brightness, or mode change temporarily bypasses ambient automation.</span></label>
+          <label>Timed override (minutes)<input id="override-minutes" type="number" min="1"><span class="help">For Timed override, how long a manual change keeps the display awake before automation resumes.</span></label>
+        </div>
+      </section>
+      <button id="save-automation">Save automation settings</button>
+    </section>
+    <section class="card">
+      <h2>Sensor status</h2>
+      <dl><div><dt>Status</dt><dd id="sensor-status">—</dd></div><div><dt>Ambient light</dt><dd id="sensor-lux">—</dd></div><div><dt>Display output</dt><dd id="effective-brightness">—</dd></div></dl>
+    </section>
+    {% endif %}
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
 </html>

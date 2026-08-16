@@ -82,10 +82,11 @@ class PixelRain(module.Module):
         return tuple(int(i * brightness) for i in color_tuple)
 
     def run(self):
-        while 1:
+        while not self.should_stop():
             start = time()
             self._place_pixels()
             self.display()
             self._shift_down()
-            sleep(self.DELAY_MS/1000)
+            if not self.wait(self.DELAY_MS/1000):
+                break
             # logger.info(f"FPS: {1/(time() - start):.1f}")

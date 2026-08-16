@@ -80,22 +80,47 @@ sudo pip install -r requirements.txt --break-system-packages
 
 Note: The `--break-system-packages` flag is required on modern Raspberry Pi OS (Debian Trixie) to install Python packages system-wide, which is necessary for `sudo` to access them when running the display program.
 
-### Running the Display
+### Running the Display Service
 
-Test the display with a specific mode:
+The display is controlled from a mobile-friendly website hosted by the Pi. Start it manually while developing:
+
 ```bash
-sudo python3 main.py 1
+sudo python3 main.py
 ```
 
-Where the mode number corresponds to:
-- 0: Game of Life
-- 1: Spectrum Analyzer (requires connected microphone)
-- 2: Image Viewer
-- 3: Thermal Camera
-- 4: Pixel Rain
-- 5: Pixel Stars
-- 6: Tetris AI
-- 7: Display Off
+Open `http://<pi-ip-address>:8080` from a device on the same trusted LAN. The service exposes no authentication or HTTPS, so do not expose this port to the public internet.
+
+The UI lets you select a display mode, turn the panel on or off, adjust global brightness, and configure ambient-light automation. Image Viewer requires an explicit selection from the approved files in `res/`; uploads and arbitrary filesystem paths are intentionally not supported.
+
+The service stores its runtime configuration in `neomatrix-config.json` next to the project. It records the selected mode, selected image asset, power state, brightness, and automation preferences. Set `NEOMATRIX_CONFIG` to use a different config path.
+
+Available mode IDs are:
+
+- `life`: Game of Life
+- `spectrum`: Spectrum Analyzer (requires connected microphone)
+- `image`: Image Viewer (requires selected asset)
+- `thermal`: Thermal Camera
+- `rain`: Pixel Rain
+- `stars`: Pixel Stars
+- `tetris`: Tetris AI
+- `off`: Display Off
+
+### Start at Boot with systemd
+
+Copy the unit template and edit its two `/home/pi/pi-neomatrix` paths if this project is installed elsewhere:
+
+```bash
+sudo cp deploy/pi-neomatrix.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now pi-neomatrix
+sudo systemctl status pi-neomatrix
+```
+
+The service runs as `root` because the current NeoPixel driver requires hardware privileges. Use `sudo systemctl restart pi-neomatrix` after deploying code changes, and `sudo journalctl -u pi-neomatrix -f` to follow logs.
+
+### Ambient Light Automation
+
+Connect the BH1750 over I²C. The service continues to run when the sensor is unavailable, and automation is disabled by default. From the UI settings page you can enable it and set sleep/wake lux thresholds, dwell times, brightness mapping, polling interval, and the manual override policy. By default it sleeps below 5 lux for 60 seconds, wakes above 10 lux for 15 seconds, and treats a manual change as a 30-minute override.
 
 ### Setting up the I2S Microphone
 For the audio spectrum analyzer mode, configure your I2S MEMS microphone:

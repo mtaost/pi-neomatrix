@@ -5,3 +5,6 @@ pillow
 adafruit-circuitpython-mlx90640
 colorlog
 pyaudio
+Flask
+waitress
+adafruit-circuitpython-bh1750

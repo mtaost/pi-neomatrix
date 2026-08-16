@@ -119,7 +119,7 @@ class SpectrumAnalyzer(module.Module):
         # print(spectrums)
 
         # Main loop
-        while True:
+        while not self.should_stop():
             start = time.time()
             # Get microphone data
             data = self.stream.read(self.chunk, exception_on_overflow=False)

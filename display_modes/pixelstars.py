@@ -97,11 +97,12 @@ class PixelStars(module.Module):
             self.curr_density -= 1
 
     def run(self):
-        while True:
+        while not self.should_stop():
             start = time()
             self._place_pixels()
             self.display()
             self._dim_pixels()
             self._reroll_density()
-            sleep(self.DELAY_MS/1000)
+            if not self.wait(self.DELAY_MS/1000):
+                break
             # logger.info(f"FPS: {1/(time() - start):.1f}")

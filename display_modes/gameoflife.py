@@ -101,8 +101,10 @@ class GameOfLife(module.Module):
     
     def run(self):
         self.display()
-        time.sleep(0.5)
-        while 1:
-            time.sleep(self.delay)
+        if not self.wait(0.5):
+            return
+        while not self.should_stop():
+            if not self.wait(self.delay):
+                break
             self.advanceState()
             self.display()

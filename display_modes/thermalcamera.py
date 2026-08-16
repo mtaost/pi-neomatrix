@@ -68,7 +68,7 @@ class ThermalCamera(module.Module):
         
     def run(self):
         autorange_counter = 0
-        while 1:
+        while not self.should_stop():
             try:
                 self.mlx.getFrame(self.thermal_data)
                 if self.autorange:

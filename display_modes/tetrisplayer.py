@@ -77,17 +77,21 @@ class TetrisPlayer(module.Module):
             self.pixels[x + x_offset, y + y_offset] = color
 
     def run(self):
-        while True:
+        while not self.should_stop():
             start = time()
 
             self.draw_board()
             self.display()
             self.step_game()
-            sleep(self.delay)
+            if not self.wait(self.delay):
+                break
 
             stop = time()
             fps = 1.0/(stop - start)
             logger.info(f"PPS: {fps:.2f}")
+
+    def cleanup(self):
+        self.tetris_runner.kill_bot()
 
 
 if __name__ == "main":
