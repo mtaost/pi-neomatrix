@@ -1,3 +1,4 @@
+from mode_settings import normalize_settings
 import copy
 import logging
 import threading
@@ -53,7 +54,8 @@ class DisplayController:
         if mode_id:
             try:
                 options = self._config.get("active_mode_options", {})
-                self.select_mode(mode_id, options.get("asset_id"), manual=False)
+                mode_settings = {key: value for key, value in options.items() if key in self.registry[mode_id].settings_schema}
+                self.select_mode(mode_id, options.get("asset_id"), mode_settings, manual=False)
             except (ValueError, RuntimeError):
                 pass
 
@@ -108,15 +110,16 @@ class DisplayController:
     def list_assets(self):
         return self.assets.list_assets()
 
-    def select_mode(self, mode_id, asset_id=None, manual=True):
+    def select_mode(self, mode_id, asset_id=None, settings=None, manual=True):
         if mode_id not in self.registry:
             logger.warning("Rejected unknown display mode: %s", mode_id)
             raise ValueError("Unknown display mode.")
         spec = self.registry[mode_id]
-        options = {}
+        mode_settings = normalize_settings(spec.settings_schema, settings)
+        options = dict(mode_settings)
         if spec.requires_asset:
             path = self.assets.resolve(asset_id)
-            options = {"asset_id": asset_id, "asset_path": path}
+            options.update({"asset_id": asset_id, "asset_path": path})
         elif asset_id is not None:
             raise ValueError("This display mode does not accept an image asset.")
         try:
@@ -138,7 +141,7 @@ class DisplayController:
             self._mode_pause_event = pause_event
             self._frame = Image.new("RGB", (self.driver.width, self.driver.height), "black")
             self._config["active_mode"] = mode_id
-            self._config["active_mode_options"] = {"asset_id": asset_id} if asset_id else {}
+            self._config["active_mode_options"] = {"asset_id": asset_id, **mode_settings} if asset_id else mode_settings
             self._config["power"] = True
             if manual:
                 self._record_manual_interaction_locked()
@@ -146,6 +149,23 @@ class DisplayController:
             self._mode_thread = threading.Thread(target=self._run_mode, args=(mode_id, mode), name=f"mode-{mode_id}", daemon=True)
             self._mode_thread.start()
             logger.info("Selected display mode: %s", mode_id)
+        return self.get_state()
+
+    def update_active_mode_settings(self, changes):
+        with self._lock:
+            if not self._active_mode_id or not self._active_mode:
+                raise ValueError("No display mode is active.")
+            spec = self.registry[self._active_mode_id]
+            if not spec.settings_schema:
+                raise ValueError(f"{spec.name} has no configurable settings.")
+            current = self._config["active_mode_options"]
+            settings = normalize_settings(spec.settings_schema, changes, current)
+            if not hasattr(self._active_mode, "update_settings"):
+                raise ValueError(f"{spec.name} cannot update settings while running.")
+            self._active_mode.update_settings(settings)
+            self._config["active_mode_options"].update(settings)
+            self._persist_locked()
+            logger.info("Updated settings for display mode: %s", self._active_mode_id)
         return self.get_state()
 
     def set_power(self, on):

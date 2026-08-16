@@ -41,13 +41,23 @@ def create_app(controller):
             logger.warning("Rejected mode request with a non-object JSON body")
             return _response(None, 400, "Request body must be a JSON object.")
         try:
-            return _response(controller.select_mode(body.get("mode"), body.get("asset_id")))
+            return _response(controller.select_mode(body.get("mode"), body.get("asset_id"), body.get("settings")))
         except ValueError as error:
             logger.warning("Rejected mode request: %s", error)
             return _response(None, 400, str(error))
         except RuntimeError as error:
             logger.warning("Could not start requested mode: %s", error)
             return _response(None, 409, str(error))
+
+    @app.patch("/api/mode/settings")
+    def mode_settings():
+        body = request.get_json(silent=True)
+        try:
+            return _response(controller.update_active_mode_settings(body))
+        except ValueError as error:
+            logger.warning("Rejected active mode settings request: %s", error)
+            return _response(None, 400, str(error))
+
 
     @app.patch("/api/settings")
     def settings():

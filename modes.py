@@ -1,3 +1,4 @@
+from mode_settings import GAME_OF_LIFE_SETTINGS
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -24,7 +25,7 @@ class ModeSpec:
 def build_mode_registry():
     def life(driver, options):
         from display_modes.gameoflife import GameOfLife
-        return GameOfLife(driver)
+        return GameOfLife(driver, options)
 
     def spectrum(driver, options):
         from display_modes.spectrumanalyzer import SpectrumAnalyzer
@@ -55,7 +56,7 @@ def build_mode_registry():
         return DisplayOff(driver)
 
     specs = [
-        ModeSpec("life", "Game of Life", life),
+        ModeSpec("life", "Game of Life", life, settings_schema=GAME_OF_LIFE_SETTINGS),
         ModeSpec("spectrum", "Spectrum Analyzer", spectrum, ("microphone",)),
         ModeSpec("image", "Image Viewer", image, requires_asset=True),
         ModeSpec("thermal", "Thermal Camera", thermal, ("mlx90640",)),

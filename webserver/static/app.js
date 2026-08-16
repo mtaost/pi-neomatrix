@@ -55,6 +55,49 @@ function renderState(state) {
 }
 async function refresh() { try { renderState(await api("/api/state")); } catch (error) { setStatus(error.message, true); } }
 
+function createModeSetting(field, value) {
+  const label = document.createElement("label");
+  label.textContent = field.label;
+  const input = document.createElement(field.type === "select" ? "select" : "input");
+  input.dataset.modeSetting = field.key;
+  if (field.type === "select") {
+    for (const choice of field.choices) {
+      const option = document.createElement("option");
+      option.value = choice.value;
+      option.textContent = choice.label;
+      input.append(option);
+    }
+  } else {
+    input.type = field.type === "color" ? "color" : "range";
+    input.min = field.min;
+    input.max = field.max;
+    input.step = field.step;
+  }
+  input.value = value;
+  label.append(input);
+  if (field.help) {
+    const help = document.createElement("span");
+    help.className = "help";
+    help.textContent = field.help;
+    label.append(help);
+  }
+  return {element: label, input};
+}
+
+function syncLifeColorControls(settingInputs) {
+  const colorMode = settingInputs.alive_color_mode;
+  if (!colorMode) return;
+  const relevantModes = {alive_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"};
+  for (const [key, requiredMode] of Object.entries(relevantModes)) {
+    const input = settingInputs[key];
+    if (!input) continue;
+    const label = input.closest("label");
+    const isRelevant = colorMode.value === requiredMode;
+    label.style.display = isRelevant ? "" : "none";
+    label.setAttribute("aria-hidden", String(!isRelevant));
+  }
+}
+
 function createModeCard(mode) {
   const card = document.createElement("article");
   card.className = "mode-card";
@@ -77,6 +120,8 @@ function createModeCard(mode) {
   card.append(description);
   const settings = document.createElement("div");
   settings.className = "mode-settings";
+  const settingInputs = {};
+
   let assetSelect = null;
   if (mode.requires_asset) {
     const label = document.createElement("label");
@@ -92,13 +137,26 @@ function createModeCard(mode) {
     label.append(assetSelect);
     settings.append(label);
   }
+  for (const [key, definition] of Object.entries(mode.settings_schema)) {
+    const field = {...definition, key};
+    const value = latestState?.mode === mode.id ? (latestState.mode_options?.[key] ?? field.default) : field.default;
+    const control = createModeSetting(field, value);
+    settingInputs[key] = control.input;
+    settings.append(control.element);
+  }
+
+  if (mode.id === "life") {
+    syncLifeColorControls(settingInputs);
+    settingInputs.alive_color_mode.addEventListener("change", () => syncLifeColorControls(settingInputs));
+  }
+
   card.append(settings);
   const launch = document.createElement("button");
   launch.textContent = mode.id === "off" ? "Turn display off" : `Start ${mode.name}`;
   launch.onclick = async () => {
     try {
       if (mode.requires_asset && !assetSelect.value) throw new Error("Add an image or GIF to the res directory first.");
-      renderState(await api("/api/mode", {method: "POST", body: JSON.stringify({mode: mode.id, asset_id: assetSelect?.value})}));
+      renderState(await api("/api/mode", {method: "POST", body: JSON.stringify({mode: mode.id, asset_id: assetSelect?.value, settings: Object.fromEntries(Object.entries(settingInputs).map(([key, input]) => [key, input.value]))})}));
     } catch (error) { setStatus(error.message, true); }
   };
   card.append(launch);
