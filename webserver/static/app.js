@@ -4,6 +4,7 @@ let latestState = null;
 let assets = [];
 let modes = [];
 let selectedModeId = null;
+let automationFormInitialized = false;
 
 async function api(path, options = {}) {
   const response = await fetch(path, {headers: {"Content-Type": "application/json"}, ...options});
@@ -34,11 +35,7 @@ function renderState(state) {
     $("effective-brightness").textContent = `${Math.round(state.effective_brightness * 100)}%${state.sleeping ? " (sleeping)" : ""}`;
     $("sensor-status").textContent = state.sensor.available ? (state.sensor.error || "Available") : (state.sensor.error || "Unavailable");
     $("sensor-lux").textContent = state.sensor.lux == null ? "No reading" : `${state.sensor.lux.toFixed(1)} lux`;
-    const a = state.automation;
-    $("automation-enabled").checked = a.enabled;
-    setValue("sleep-lux", a.sleep_lux); setValue("wake-lux", a.wake_lux); setValue("sleep-dwell", a.sleep_dwell_seconds);
-    setValue("wake-dwell", a.wake_dwell_seconds); setValue("poll-seconds", a.poll_seconds); setValue("min-brightness", a.min_brightness);
-    setValue("max-lux", a.max_lux); setValue("override-policy", a.manual_override_policy); setValue("override-minutes", a.manual_override_minutes);
+    if (!automationFormInitialized) populateAutomationForm(state.automation);
   }
   const card = document.querySelector(".mode-card");
   if (card) card.classList.toggle("active", card.dataset.mode === state.mode);
@@ -54,6 +51,14 @@ function renderState(state) {
   }
 }
 async function refresh() { try { renderState(await api("/api/state")); } catch (error) { setStatus(error.message, true); } }
+
+function populateAutomationForm(automation) {
+  $("automation-enabled").checked = automation.enabled;
+  setValue("sleep-lux", automation.sleep_lux); setValue("wake-lux", automation.wake_lux); setValue("sleep-dwell", automation.sleep_dwell_seconds);
+  setValue("wake-dwell", automation.wake_dwell_seconds); setValue("poll-seconds", automation.poll_seconds); setValue("min-brightness", automation.min_brightness);
+  setValue("max-lux", automation.max_lux); setValue("override-policy", automation.manual_override_policy); setValue("override-minutes", automation.manual_override_minutes);
+  automationFormInitialized = true;
+}
 
 function createModeSetting(field, value) {
   const label = document.createElement("label");
@@ -201,7 +206,9 @@ function initAutomationPage() {
   $("save-automation").onclick = async () => {
     try {
       const automation = {enabled: $("automation-enabled").checked, sleep_lux: number("sleep-lux"), wake_lux: number("wake-lux"), sleep_dwell_seconds: number("sleep-dwell"), wake_dwell_seconds: number("wake-dwell"), poll_seconds: number("poll-seconds"), min_brightness: number("min-brightness"), max_lux: number("max-lux"), manual_override_policy: $("override-policy").value, manual_override_minutes: number("override-minutes")};
-      renderState(await api("/api/settings", {method: "PATCH", body: JSON.stringify({automation})}));
+      const state = await api("/api/settings", {method: "PATCH", body: JSON.stringify({automation})});
+      populateAutomationForm(state.automation);
+      renderState(state);
     } catch (error) { setStatus(error.message, true); }
   };
 }
