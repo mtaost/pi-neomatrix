@@ -1,4 +1,5 @@
 import copy
+import logging
 import threading
 import time
 
@@ -8,6 +9,9 @@ from assets import AssetCatalog
 from config import ConfigStore
 from layers import BrightnessLayer, SleepLayer
 from modes import build_mode_registry
+
+
+logger = logging.getLogger(__name__)
 
 
 class DisplayController:
@@ -26,6 +30,7 @@ class DisplayController:
         self._mode_thread = None
         self._mode_stop_event = None
         self._mode_pause_event = None
+        self._mode_error = None
         self._render_stop_event = threading.Event()
         self._render_thread = None
         self._sensor_service = None
@@ -38,6 +43,7 @@ class DisplayController:
             driver.set_brightness(1.0)
 
     def start(self):
+        logger.info("Starting display controller")
         if self._render_thread is None:
             self._render_thread = threading.Thread(target=self._render_loop, name="display-compositor", daemon=True)
             self._render_thread.start()
@@ -57,6 +63,7 @@ class DisplayController:
                 return
             self._shutdown = True
             sensor_service = self._sensor_service
+            logger.info("Stopping display controller")
             render_thread = self._render_thread
         try:
             with self._lock:
@@ -72,11 +79,16 @@ class DisplayController:
             finally:
                 if hasattr(self.driver, "stop"):
                     self.driver.stop()
+                logger.info("Display controller stopped")
 
     def attach_sensor_service(self, service, available=True, name="BH1750", error=None):
         with self._lock:
             self._sensor_service = service
             self._sensor.update({"available": available, "name": name, "error": error})
+            if available:
+                logger.info("Sensor available: %s", name)
+            else:
+                logger.warning("Sensor unavailable: %s", error or name)
 
     def record_sensor_reading(self, lux, timestamp=None):
         with self._lock:
@@ -98,6 +110,7 @@ class DisplayController:
 
     def select_mode(self, mode_id, asset_id=None, manual=True):
         if mode_id not in self.registry:
+            logger.warning("Rejected unknown display mode: %s", mode_id)
             raise ValueError("Unknown display mode.")
         spec = self.registry[mode_id]
         options = {}
@@ -109,6 +122,7 @@ class DisplayController:
         try:
             mode = spec.factory(self.driver, options)
         except Exception as error:
+            logger.warning("Unable to initialize display mode %s: %s", mode_id, error, exc_info=True)
             raise RuntimeError(f"Unable to start {spec.name}: {error}") from error
         stop_event = threading.Event()
         pause_event = threading.Event()
@@ -119,6 +133,7 @@ class DisplayController:
             self._stop_active_locked()
             self._active_mode = mode
             self._active_mode_id = mode_id
+            self._mode_error = None
             self._mode_stop_event = stop_event
             self._mode_pause_event = pause_event
             self._frame = Image.new("RGB", (self.driver.width, self.driver.height), "black")
@@ -128,8 +143,9 @@ class DisplayController:
             if manual:
                 self._record_manual_interaction_locked()
             self._persist_locked()
-            self._mode_thread = threading.Thread(target=mode.run, name=f"mode-{mode_id}", daemon=True)
+            self._mode_thread = threading.Thread(target=self._run_mode, args=(mode_id, mode), name=f"mode-{mode_id}", daemon=True)
             self._mode_thread.start()
+            logger.info("Selected display mode: %s", mode_id)
         return self.get_state()
 
     def set_power(self, on):
@@ -137,6 +153,7 @@ class DisplayController:
             raise ValueError("Power must be a boolean.")
         with self._lock:
             self._config["power"] = on
+            logger.info("Display power set to %s", "on" if on else "off")
             if on:
                 self._record_manual_interaction_locked()
             else:
@@ -154,6 +171,7 @@ class DisplayController:
             raise ValueError("Brightness must be a number from 0 to 1.")
         with self._lock:
             self._config["user_brightness"] = brightness
+            logger.info("Display brightness set to %.0f%%", brightness * 100)
             self._record_manual_interaction_locked()
             self._persist_locked()
         return self.get_state()
@@ -167,9 +185,11 @@ class DisplayController:
         with self._lock:
             if "brightness" in changes:
                 self._set_brightness_locked(changes["brightness"])
+                logger.info("Display brightness set to %.0f%%", self._config["user_brightness"] * 100)
                 self._record_manual_interaction_locked()
             if "automation" in changes:
                 self._update_automation_locked(changes["automation"])
+                logger.info("Ambient automation settings updated")
             self._persist_locked()
         return self.get_state()
 
@@ -180,6 +200,7 @@ class DisplayController:
             return {
                 "mode": self._active_mode_id,
                 "mode_options": copy.deepcopy(self._config["active_mode_options"]),
+                "mode_error": copy.deepcopy(self._mode_error),
                 "power": self._config["power"],
                 "user_brightness": self._config["user_brightness"],
                 "effective_brightness": effective_brightness,
@@ -189,6 +210,34 @@ class DisplayController:
                 "manual_override": self._manual_override_state_locked(now),
                 "sensor": copy.deepcopy(self._sensor),
             }
+
+    def _run_mode(self, mode_id, mode):
+        try:
+            mode.run()
+        except Exception as error:
+            logger.exception("Display mode crashed: %s", mode_id)
+            self._handle_mode_crash(mode_id, mode, error)
+
+    def _handle_mode_crash(self, mode_id, mode, error):
+        with self._lock:
+            if self._active_mode is not mode:
+                logger.info("Ignoring crash from inactive display mode: %s", mode_id)
+                return
+            self._active_mode = self._active_mode_id = self._mode_thread = self._mode_stop_event = self._mode_pause_event = None
+            self._frame = Image.new("RGB", (self.driver.width, self.driver.height), "black")
+            self._config["active_mode"] = None
+            self._config["active_mode_options"] = {}
+            self._config["power"] = False
+            self._config["manual_override_active"] = False
+            self._config["manual_override_until"] = None
+            self._mode_error = {"mode": mode_id, "message": str(error), "at": time.time()}
+            self._set_sleeping_locked(True)
+            self._persist_locked()
+        try:
+            mode.cleanup()
+        except Exception:
+            logger.exception("Mode cleanup failed after crash: %s", mode_id)
+        logger.error("Display mode %s failed and the panel was safely turned off", mode_id)
 
     def publish_frame(self, image):
         with self._lock:
@@ -239,6 +288,8 @@ class DisplayController:
         return (0.0 if self._sleeping else self._ambient_brightness_locked(sensor_lux), "ambient_dark" if self._sleeping else "ambient_active")
 
     def _set_sleeping_locked(self, sleeping):
+        if self._sleeping != sleeping:
+            logger.info("Display sleep state changed: %s", "asleep" if sleeping else "awake")
         self._sleeping = sleeping
         if self._mode_pause_event:
             if sleeping:
@@ -333,7 +384,7 @@ class DisplayController:
         self.config_store.save(self._config)
 
     def _stop_active_locked(self):
-        mode, thread, stop_event, pause_event = self._active_mode, self._mode_thread, self._mode_stop_event, self._mode_pause_event
+        mode, mode_id, thread, stop_event, pause_event = self._active_mode, self._active_mode_id, self._mode_thread, self._mode_stop_event, self._mode_pause_event
         self._active_mode = self._active_mode_id = self._mode_thread = self._mode_stop_event = self._mode_pause_event = None
         if stop_event:
             stop_event.set()
@@ -342,6 +393,7 @@ class DisplayController:
         if thread and thread.is_alive():
             thread.join(timeout=2)
         if mode:
+            logger.info("Stopping display mode: %s", mode_id)
             try:
                 mode.cleanup()
             except Exception:

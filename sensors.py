@@ -1,5 +1,9 @@
+import logging
 import threading
 import time
+
+
+logger = logging.getLogger(__name__)
 
 
 class Sensor:
@@ -31,9 +35,11 @@ class SensorService:
         self._poll_seconds = poll_seconds
         self._stop_event = threading.Event()
         self._thread = None
+        self._last_error = None
 
     def start(self):
         if self._thread is None:
+            logger.info("Starting sensor service: %s", self.sensor.name)
             self._thread = threading.Thread(target=self._run, name="light-sensor", daemon=True)
             self._thread.start()
 
@@ -41,11 +47,19 @@ class SensorService:
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=2)
+        logger.info("Sensor service stopped: %s", self.sensor.name)
 
     def _run(self):
         while not self._stop_event.is_set():
             try:
                 self._on_reading(float(self.sensor.read_lux()), time.time())
+                if self._last_error is not None:
+                    logger.info("Sensor recovered: %s", self.sensor.name)
+                    self._last_error = None
             except Exception as error:
-                self._on_error(str(error))
+                message = str(error)
+                if message != self._last_error:
+                    logger.warning("Sensor read failed (%s): %s", self.sensor.name, message)
+                    self._last_error = message
+                self._on_error(message)
             self._stop_event.wait(max(1.0, float(self._poll_seconds())))

@@ -1,5 +1,6 @@
 import argparse
 import atexit
+import logging
 import os
 from pathlib import Path
 
@@ -8,11 +9,13 @@ from assets import AssetCatalog
 from config import ConfigStore
 from controller import DisplayController
 from lifecycle import install_shutdown_handlers
+from logging_setup import configure_logging
 from sensors import BH1750Sensor, SensorService
 from webserver.app import create_app
 
 
 ROOT = Path(__file__).resolve().parent
+logger = logging.getLogger(__name__)
 
 
 def build_controller(config_path=None, driver_factory=driver.MatrixDriver):
@@ -25,6 +28,7 @@ def build_controller(config_path=None, driver_factory=driver.MatrixDriver):
             AssetCatalog(ROOT / "res"),
         )
     except Exception:
+        logger.exception("Controller initialization failed; releasing the matrix driver")
         matrix_driver.stop()
         raise
     try:
@@ -37,6 +41,7 @@ def build_controller(config_path=None, driver_factory=driver.MatrixDriver):
 
 
 def main():
+    configure_logging()
     parser = argparse.ArgumentParser(description="pi-neomatrix mobile display control service")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", default=8080, type=int)
@@ -49,10 +54,15 @@ def main():
         install_shutdown_handlers(controller.shutdown)
         app = create_app(controller)
         controller.start()
+        logger.info("Starting NeoMatrix web service on %s:%s", args.host, args.port)
         from waitress import serve
         serve(app, host=args.host, port=args.port)
+    except Exception:
+        logger.exception("NeoMatrix service exited due to an unexpected error")
+        raise
     finally:
         if controller:
+            logger.info("Shutting down NeoMatrix service")
             controller.shutdown()
 
 

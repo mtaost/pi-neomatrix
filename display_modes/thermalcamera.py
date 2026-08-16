@@ -1,3 +1,5 @@
+import logging
+
 from display_modes import module
 import board
 import busio
@@ -7,13 +9,16 @@ from numpy import linspace
 
 import time
 
+
+logger = logging.getLogger(__name__)
+
+
 class ThermalCamera(module.Module):
     def __init__(self, driver):
         super().__init__(driver)
         self.i2c = busio.I2C(board.SCL, board.SDA, frequency=640000)
         self.mlx = adafruit_mlx90640.MLX90640(self.i2c)
-        print("MLX addr detected on I2C")
-        print([hex(i) for i in self.mlx.serial_number])
+        logger.info("MLX90640 detected on I2C; serial=%s", [hex(i) for i in self.mlx.serial_number])
         self.mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_16_HZ
         self.thermal_data = [0] * 768
         self.thermal_image = Image.new('RGB', (32, 24), 'black')

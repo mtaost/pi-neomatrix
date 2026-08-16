@@ -3,7 +3,6 @@ numpy
 rpi_ws281x
 pillow
 adafruit-circuitpython-mlx90640
-colorlog
 pyaudio
 Flask
 waitress

@@ -56,6 +56,16 @@ def fake_factory(driver, options):
     return FakeMode(driver)
 
 
+class CrashingMode(FakeMode):
+    def run(self):
+        self.frame_sink(Image.new("RGB", (self.driver.width, self.driver.height), "red"))
+        raise RuntimeError("simulated mode failure")
+
+
+def crashing_factory(driver, options):
+    return CrashingMode(driver)
+
+
 class ConfigAndAssetTests(unittest.TestCase):
     def test_config_defaults_and_corruption(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -93,6 +103,7 @@ class DisplayControllerTests(unittest.TestCase):
         registry = {
             "fake": ModeSpec("fake", "Fake", fake_factory),
             "image": ModeSpec("image", "Image", fake_factory, requires_asset=True),
+            "crash": ModeSpec("crash", "Crash", crashing_factory),
         }
         controller = DisplayController(FakeDriver(), ConfigStore(root / "config.json"), AssetCatalog(assets), registry, render_fps=100)
         self.addCleanup(controller.shutdown)
@@ -113,6 +124,25 @@ class DisplayControllerTests(unittest.TestCase):
             controller.select_mode("image")
         controller.select_mode("image", "sample.gif")
         self.assertEqual(controller.get_state()["mode"], "image")
+
+    def test_mode_crash_persists_a_safe_off_state_and_reports_error(self):
+        controller = self.make_controller()
+        controller.start()
+        controller.select_mode("crash")
+        deadline = time.time() + 1
+        while time.time() < deadline:
+            state = controller.get_state()
+            if state["mode_error"]:
+                break
+            time.sleep(0.01)
+        self.assertEqual(state["mode"], None)
+        self.assertFalse(state["power"])
+        self.assertEqual(state["mode_error"]["mode"], "crash")
+        self.assertEqual(state["mode_error"]["message"], "simulated mode failure")
+        self.assertEqual(controller.config_store.load()["active_mode"], None)
+        self.assertFalse(controller.config_store.load()["power"])
+        time.sleep(0.03)
+        self.assertEqual(controller.driver.frames[-1].getpixel((0, 0)), (0, 0, 0))
 
     def test_shutdown_blanks_the_panel_before_releasing_the_driver(self):
         controller = self.make_controller()

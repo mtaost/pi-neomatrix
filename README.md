@@ -116,7 +116,7 @@ sudo systemctl enable --now pi-neomatrix
 sudo systemctl status pi-neomatrix
 ```
 
-The service runs as `root` because the current NeoPixel driver requires hardware privileges. It handles `SIGINT` and `SIGTERM` by blanking the panel and releasing the NeoPixel GPIO resource before exit. Use `sudo systemctl restart pi-neomatrix` after deploying code changes, and `sudo journalctl -u pi-neomatrix -f` to follow logs. Hard power loss, kernel failure, and `SIGKILL` cannot run application cleanup; the unit restarts the service after failures.
+The service runs as `root` because the current NeoPixel driver requires hardware privileges. It handles `SIGINT` and `SIGTERM` by blanking the panel and releasing the NeoPixel GPIO resource before exit. Standard Python logs are written to stderr and captured by systemd; use `sudo journalctl -u pi-neomatrix -f` to follow them. Set `NEOMATRIX_LOG_LEVEL=DEBUG` when temporarily investigating a mode, then return to the default `INFO` level. Use `sudo systemctl restart pi-neomatrix` after deploying code changes. Hard power loss, kernel failure, and `SIGKILL` cannot run application cleanup; the unit restarts the service after failures.
 
 ### Ambient Light Automation
 

@@ -47,7 +47,11 @@ function renderState(state) {
     const assetSelect = document.querySelector(`[data-asset-for="${state.mode}"]`);
     if (assetSelect) assetSelect.value = selectedAsset;
   }
-  setStatus(state.mode ? `${state.mode} · ${state.sleep_reason.replaceAll("_", " ")}` : "No mode selected");
+  if (state.mode_error) {
+    setStatus(`Mode error (${state.mode_error.mode}): ${state.mode_error.message}`, true);
+  } else {
+    setStatus(state.mode ? `${state.mode} · ${state.sleep_reason.replaceAll("_", " ")}` : "No mode selected");
+  }
 }
 async function refresh() { try { renderState(await api("/api/state")); } catch (error) { setStatus(error.message, true); } }
 

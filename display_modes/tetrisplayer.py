@@ -2,9 +2,9 @@ from display_modes.tetris_runner import MisaMinoRunner
 from PIL import Image
 from display_modes import module
 from time import sleep, time
-import colorlog
+import logging
 
-logger = colorlog.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 jstris_mino_colors = {'I': (25, 165, 225), 'J': (33, 65, 225), 'L': (277, 91, 2), 'S': (55, 200, 1), 'Z':
@@ -88,7 +88,7 @@ class TetrisPlayer(module.Module):
 
             stop = time()
             fps = 1.0/(stop - start)
-            logger.info(f"PPS: {fps:.2f}")
+            logger.debug("Tetris PPS: %.2f", fps)
 
     def cleanup(self):
         self.tetris_runner.kill_bot()

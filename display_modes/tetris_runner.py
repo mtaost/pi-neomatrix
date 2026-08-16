@@ -3,10 +3,10 @@ from collections import deque
 from time import sleep
 import random
 import subprocess
-import colorlog
+import logging
 from copy import deepcopy
 
-logger = colorlog.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TetrisGame():
@@ -174,17 +174,17 @@ class MisaMinoRunner():
     def _init_bot(self) -> None:
         command = "update game round 1"
         self._write(command)
-        logger.info(f"bot_command: {command}")
+        logger.debug(f"bot_command: {command}")
 
         command = "settings style 4"
         self._write(command)
         self._read()
-        logger.info(f"bot_command: {command}")
+        logger.debug(f"bot_command: {command}")
 
         command = "settings level 1"
         self._write(command)
         self._read()
-        logger.info(f"bot_command: {command}")
+        logger.debug(f"bot_command: {command}")
 
         self._set_pieces()
         self._set_field()
@@ -198,19 +198,19 @@ class MisaMinoRunner():
 
         self._write(this_piece_command)
         self._write(next_pieces_command)
-        logger.info(f"bot_command: {this_piece_command}")
-        logger.info(f"bot_command: {next_pieces_command}")
+        logger.debug(f"bot_command: {this_piece_command}")
+        logger.debug(f"bot_command: {next_pieces_command}")
 
     def _set_field(self) -> None:
         command = f"update bot1 field {self.tetris_game.bot_board}"
         self._write(command)
-        logger.info(f"bot_command: {command[0:38]}...{command[-20:]}")
+        logger.debug(f"bot_command: {command[0:38]}...{command[-20:]}")
 
     def step_bot(self) -> None:
         # Send command to bot
         command = "action2 moves 1"
         self._write(command)
-        logger.info(f"bot_command: {command}")
+        logger.debug(f"bot_command: {command}")
 
         # Get response
         try:
@@ -222,7 +222,7 @@ class MisaMinoRunner():
         lines_cleared = int(response[0])
         spins_used = True if response[2] == '1' else False
         new_board_state = response[4:]
-        logger.info(f"bot_response: lines- {lines_cleared} spins- {spins_used}")
+        logger.debug(f"bot_response: lines- {lines_cleared} spins- {spins_used}")
 
         # if no moves were found, throw exception
         if lines_cleared == -1:

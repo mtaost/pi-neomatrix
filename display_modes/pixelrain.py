@@ -5,9 +5,9 @@ from numpy import linspace
 from datetime import datetime
 from time import sleep, time
 import random
-import colorlog
+import logging
 
-logger = colorlog.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 class PixelRain(module.Module):
     """Pixel rain, rainbow or other colors"""

@@ -4,11 +4,11 @@ import numpy as np
 from PIL import Image
 from display_modes import module
 import time
-import colorlog
+import logging
 import re
 import subprocess
 
-logger = colorlog.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SpectrumAnalyzer(module.Module):
@@ -123,7 +123,7 @@ class SpectrumAnalyzer(module.Module):
             start = time.time()
             # Get microphone data
             data = self.stream.read(self.chunk, exception_on_overflow=False)
-            logger.info(data)
+            logger.debug("Read audio chunk (%d bytes)", len(data))
 
             # Process data into a display matrix
             matrix = self._calculate_levels(data, self.chunk, self.sample_rate)
@@ -135,7 +135,7 @@ class SpectrumAnalyzer(module.Module):
             self.display()
             stop = time.time()
             fps = 1.0/(stop - start)
-            logger.info(f"FPS: {fps:.2f}")
+            logger.debug("Spectrum FPS: %.2f", fps)
 
     def cleanup(self):
         self.stream.stop_stream()

@@ -1,4 +1,9 @@
+import logging
+
 from flask import Flask, jsonify, render_template, request
+
+
+logger = logging.getLogger(__name__)
 
 
 def _response(state, status=200, error=None):
@@ -33,12 +38,15 @@ def create_app(controller):
     def select_mode():
         body = request.get_json(silent=True)
         if not isinstance(body, dict):
+            logger.warning("Rejected mode request with a non-object JSON body")
             return _response(None, 400, "Request body must be a JSON object.")
         try:
             return _response(controller.select_mode(body.get("mode"), body.get("asset_id")))
         except ValueError as error:
+            logger.warning("Rejected mode request: %s", error)
             return _response(None, 400, str(error))
         except RuntimeError as error:
+            logger.warning("Could not start requested mode: %s", error)
             return _response(None, 409, str(error))
 
     @app.patch("/api/settings")
@@ -47,16 +55,19 @@ def create_app(controller):
         try:
             return _response(controller.update_settings(body))
         except ValueError as error:
+            logger.warning("Rejected settings request: %s", error)
             return _response(None, 400, str(error))
 
     @app.post("/api/power")
     def power():
         body = request.get_json(silent=True)
         if not isinstance(body, dict) or "on" not in body:
+            logger.warning("Rejected power request with missing or invalid JSON body")
             return _response(None, 400, "Request body must include boolean 'on'.")
         try:
             return _response(controller.set_power(body["on"]))
         except ValueError as error:
+            logger.warning("Rejected power request: %s", error)
             return _response(None, 400, str(error))
 
     return app
