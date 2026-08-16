@@ -57,15 +57,21 @@ class DisplayController:
                 return
             self._shutdown = True
             sensor_service = self._sensor_service
-            self._stop_active_locked()
-            self._render_stop_event.set()
-        if sensor_service:
-            sensor_service.stop()
-        if self._render_thread:
-            self._render_thread.join(timeout=2)
-        self._show_black()
-        if hasattr(self.driver, "stop"):
-            self.driver.stop()
+            render_thread = self._render_thread
+        try:
+            with self._lock:
+                self._stop_active_locked()
+                self._render_stop_event.set()
+            if sensor_service:
+                sensor_service.stop()
+            if render_thread:
+                render_thread.join(timeout=2)
+        finally:
+            try:
+                self._show_black()
+            finally:
+                if hasattr(self.driver, "stop"):
+                    self.driver.stop()
 
     def attach_sensor_service(self, service, available=True, name="BH1750", error=None):
         with self._lock:

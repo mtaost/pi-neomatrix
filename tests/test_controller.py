@@ -2,6 +2,7 @@ import json
 import tempfile
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from PIL import Image
@@ -9,6 +10,7 @@ from PIL import Image
 from assets import AssetCatalog
 from config import ConfigStore
 from controller import DisplayController
+from lifecycle import install_shutdown_handlers
 from modes import ModeSpec
 
 
@@ -20,15 +22,18 @@ class FakeDriver:
         self.frames = []
         self.brightness = None
         self.stopped = False
+        self.events = []
 
     def set_brightness(self, value):
         self.brightness = value
 
     def display(self, image):
         self.frames.append(image.copy())
+        self.events.append("display")
 
     def stop(self):
         self.stopped = True
+        self.events.append("stop")
 
 
 class FakeMode:
@@ -109,6 +114,28 @@ class DisplayControllerTests(unittest.TestCase):
         controller.select_mode("image", "sample.gif")
         self.assertEqual(controller.get_state()["mode"], "image")
 
+    def test_shutdown_blanks_the_panel_before_releasing_the_driver(self):
+        controller = self.make_controller()
+        controller.start()
+        controller.select_mode("fake")
+        time.sleep(0.03)
+        controller.shutdown()
+        self.assertTrue(controller.driver.stopped)
+        self.assertEqual(controller.driver.frames[-1].getpixel((0, 0)), (0, 0, 0))
+        self.assertEqual(controller.driver.events[-1], "stop")
+
+    def test_shutdown_releases_driver_when_black_frame_write_fails(self):
+        class FailingDriver(FakeDriver):
+            def display(self, image):
+                raise RuntimeError("LED write failed")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            controller = DisplayController(FailingDriver(), ConfigStore(root / "config.json"), AssetCatalog(root / "res"), {})
+            with self.assertRaisesRegex(RuntimeError, "LED write failed"):
+                controller.shutdown()
+            self.assertTrue(controller.driver.stopped)
+
     def test_automation_dwell_and_manual_override(self):
         controller = self.make_controller()
         controller.update_settings({"automation": {"enabled": True, "sleep_lux": 5, "wake_lux": 10, "sleep_dwell_seconds": 1, "wake_dwell_seconds": 1, "poll_seconds": 1, "min_brightness": 0.2, "max_lux": 100, "manual_override_policy": "always", "manual_override_minutes": 1}})
@@ -128,6 +155,18 @@ class DisplayControllerTests(unittest.TestCase):
         controller.set_user_brightness(0.5)
         controller.record_sensor_reading(0, 104)
         self.assertEqual(controller.get_state()["sleep_reason"], "manual_override")
+
+
+class LifecycleTests(unittest.TestCase):
+    @mock.patch("lifecycle.signal.signal")
+    def test_signal_handlers_shutdown_then_exit(self, register_signal):
+        shutdown_calls = []
+        handler = install_shutdown_handlers(lambda: shutdown_calls.append(True))
+        self.assertEqual(register_signal.call_count, 2)
+        with self.assertRaises(SystemExit) as exited:
+            handler(15, None)
+        self.assertEqual(exited.exception.code, 0)
+        self.assertEqual(shutdown_calls, [True])
 
 
 try:

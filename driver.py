@@ -47,6 +47,7 @@ class MatrixDriver():
         self.index_map = generate_map_fullsize_display()
 
         self.brightness = 0.25
+        self._stopped = False
         self.pixels = neopixel.NeoPixel(pin, width * height, auto_write=False, pixel_order=order)
 
     def display(self, img):
@@ -83,6 +84,10 @@ class MatrixDriver():
         return tuple(int(i * self.brightness) for i in color_tuple)
 
     def stop(self):
+        """Release the NeoPixel GPIO resource exactly once."""
+        if self._stopped:
+            return
+        self._stopped = True
         self.pixels.deinit()
 
 if __name__ == "__main__":

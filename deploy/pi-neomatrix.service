@@ -10,6 +10,8 @@ WorkingDirectory=/home/pi/pi-neomatrix
 ExecStart=/usr/bin/python3 /home/pi/pi-neomatrix/main.py
 Restart=on-failure
 RestartSec=3
+TimeoutStopSec=10
+KillSignal=SIGTERM
 
 [Install]
 WantedBy=multi-user.target
