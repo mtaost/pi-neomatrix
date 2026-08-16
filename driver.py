@@ -39,7 +39,7 @@ class MatrixDriver():
         Provides modules a width by height 3-tuple input to drive a matrix"""
 
     """ Change parameters here to adjust for your setup"""
-    def __init__(self, pin=board.D12, width=16, height=16, order=neopixel.GRB):
+    def __init__(self, pin=board.D21, width=16, height=16, order=neopixel.GRB):
         self.pin = pin
         self.width = width
         self.height = height

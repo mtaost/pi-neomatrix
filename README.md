@@ -54,19 +54,50 @@ Required hardware:
 - BH1750 Light sensor
 - MLX90640 IR Thermal Camera
 
-## Sofware Setup ##
-To get started, set up a Raspberry Pi using the Raspian lite OS and connect it to your network using `raspi-config`. In raspi-config, go to interface and enable SSH, I2C, and SPI, then connect to WiFi.
+## Software Setup ##
 
-Run `sudo apt-get update` to update the OS and then ensure SSH access before disconnecting the Raspberry Pi from your display if you wish to use the device remotely. 
-Run `sudo apt install python3-pip` to get pip 
+### Initial Raspberry Pi Setup
+1. Set up a Raspberry Pi using the Raspbian OS and connect it to your network
+2. Run `sudo raspi-config` and enable the following interfaces:
+   - SSH
+   - I2C
+   - SPI
+3. Connect to WiFi through `raspi-config`
 
-`sudo pip3 install -r requirements.txt`
+### Install Dependencies
 
-Numpy for raspberry pi
+#### System packages
 ```bash
-$ sudo apt-get install libopenjp2-7
+sudo apt update
+sudo apt install -y python3-pip python3-dev libopenjp2-7 python3-pyaudio
 ```
 
-Setting up the I2S microphone:
-https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
-https://makersportal.com/shop/i2s-mems-microphone-for-raspberry-pi-inmp441
+#### Python packages
+```bash
+cd /path/to/pi-neomatrix
+sudo pip install -r requirements.txt --break-system-packages
+```
+
+Note: The `--break-system-packages` flag is required on modern Raspberry Pi OS (Debian Trixie) to install Python packages system-wide, which is necessary for `sudo` to access them when running the display program.
+
+### Running the Display
+
+Test the display with a specific mode:
+```bash
+sudo python3 main.py 1
+```
+
+Where the mode number corresponds to:
+- 0: Game of Life
+- 1: Spectrum Analyzer (requires connected microphone)
+- 2: Image Viewer
+- 3: Thermal Camera
+- 4: Pixel Rain
+- 5: Pixel Stars
+- 6: Tetris AI
+- 7: Display Off
+
+### Setting up the I2S Microphone
+For the audio spectrum analyzer mode, configure your I2S MEMS microphone:
+- https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
+- https://makersportal.com/shop/i2s-mems-microphone-for-raspberry-pi-inmp441

@@ -14,7 +14,7 @@ class GameOfLife(module.Module):
         if driver.width != 16 or driver.height != 16:
             raise Exception(f"Unacceptable Dimensions:{driver.width}x{driver.height}")
         super().__init__(driver)
-        random.seed(datetime.now())
+        random.seed(int(datetime.now().timestamp()))
         self.state = [list([0 for i in range(self.height)]) for j in range(self.width)]
         self.randomize()
         self.red = 240
