@@ -69,7 +69,7 @@ Required hardware:
 #### System packages
 ```bash
 sudo apt update
-sudo apt install -y python3-pip python3-dev libopenjp2-7 python3-pyaudio cargo rustc
+sudo apt install -y python3-pip python3-dev libopenjp2-7 alsa-utils cargo rustc
 ```
 
 #### Python packages
@@ -139,3 +139,29 @@ Connect the BH1750 over I²C. The service continues to run when the sensor is un
 For the audio spectrum analyzer mode, configure your I2S MEMS microphone:
 - https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
 - https://makersportal.com/shop/i2s-mems-microphone-for-raspberry-pi-inmp441
+
+The spectrum mode uses ALSA's native `arecord` capture path at 48 kHz with
+32-bit, two-channel I2S samples. An INMP441 uses one I2S channel, and the
+capture layer automatically selects the channel carrying its signal. It
+auto-selects the sole I2S capture card; if several
+capture cards are installed, use the diagnostics first rather than relying on
+card numbers, which can change after a reboot.
+
+### Audio diagnostics
+
+Run these from the project directory on the Pi before selecting Spectrum in the
+web UI:
+
+```bash
+python3 scripts/audio_devices.py
+python3 scripts/audio_input_check.py --seconds 5 --wav /tmp/inmp441-test.wav
+python3 scripts/audio_output_check.py --device hw:0,0
+```
+
+The device script prints each usable `hw:C,D` identifier. The input check
+measures ambient RMS and peak level in dBFS; repeat it while speaking or
+clapping near the INMP441 and confirm its peak rises. The INMP441 is input-only:
+the output check validates a separate HDMI, USB, or speaker output, so select
+one explicitly when more than one playback device exists. If the microphone is
+not detected, confirm its I2S overlay and wiring before running the display
+service.

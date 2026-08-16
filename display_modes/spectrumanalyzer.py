@@ -1,144 +1,102 @@
-import pyaudio
-from struct import unpack
-import numpy as np
-from PIL import Image
-from display_modes import module
-import time
 import logging
-import re
-import subprocess
+import time
+
+import numpy as np
+
+from display_modes import module
+from hw.audio import AlsaCapture, AudioCaptureError
+
 
 logger = logging.getLogger(__name__)
 
 
 class SpectrumAnalyzer(module.Module):
-    """Pretty bargraph spectrum analyzer"""
+    """16-band spectrum analyzer backed by the Pi's native ALSA I2S capture."""
 
-    def __init__(self, driver):
+    SAMPLE_RATE = 48_000
+    CHUNK_SIZE = 2_048
+    MIN_FREQUENCY = 32
+    MAX_FREQUENCY = 20_000
+    NOISE_FLOOR_DBFS = -72.0
+    FULL_SCALE_DBFS = -24.0
+    DECAY = 0.78
+    BAND_WEIGHTS = np.array(
+        [0.85, 0.85, 0.9, 0.95, 1.0, 1.0, 1.05, 1.05, 1.1, 1.1, 1.1, 1.2, 1.2, 1.25, 1.3, 1.3]
+    )
+
+    def __init__(self, driver, capture_factory=AlsaCapture):
         if driver.width != 16 or driver.height != 16:
-            raise Exception(f"Unacceptable Dimensions:{driver.width}x{driver.height}")
+            raise ValueError(f"Unacceptable Dimensions:{driver.width}x{driver.height}")
         super().__init__(driver)
-
-        # Audio setup
-        self.no_channels = 1
-        self.sample_rate = 44100
-        # self.sample_rate = 96000
-
-        # Chunk must be a multiple of driver size
-        # NOTE: If chunk size is too small the program will crash
-        # with error message: [Errno Input overflowed]
-        self.chunk = 2048
-
-        def get_device(target_name="snd_rpi_i2s_card") -> int:
-            cmd = "arecord -l"
-            ret_val = subprocess.check_output(cmd, shell=True).decode("utf-8")
-            match = re.search(r'card (\d+)', ret_val)
-            logger.info(f"{cmd}\n{ret_val}")
-            return int(match.group(1))
-
-            # p = pyaudio.PyAudio()
-
-            # # Search for device with name starting with target_name
-            # for dev_id in range(p.get_device_count()):
-            #     name: str = p.get_device_info_by_index(dev_id)['name']
-            #     if name.startswith(target_name):
-            #         logger.info(f"Found I2S device {name} with ID {dev_id}")
-            #         p.terminate()
-            #         return dev_id
-
-            # # Did not find target name
-            # raise Exception(f"Did not find device with name {target_name}")
-            # return 0
-
-        # Use results from list_devices() to determine your microphone index
-        # self.device = get_device()
-        self.device = 1
-
-        self.pyaudio = pyaudio.PyAudio()
-        self.stream = self.pyaudio.open(format=pyaudio.paInt16,
-                                        channels=self.no_channels,
-                                        rate=self.sample_rate,
-                                        input=True,
-                                        frames_per_buffer=self.chunk,
-                                        input_device_index=self.device)
-        # stream = p.open(format = pyaudio.paInt16, channels = 1, rate = 44100, input = True, frames_per_buffer = 2048, input_device_index = 1)
+        self.capture_factory = capture_factory
+        self.capture = None
+        self.levels = np.zeros(self.width, dtype=float)
+        self.window = np.hanning(self.CHUNK_SIZE).astype(np.float32)
+        self.frequencies = np.fft.rfftfreq(self.CHUNK_SIZE, d=1.0 / self.SAMPLE_RATE)
+        self.bin_edges = self._generate_bins(self.width)
 
     def _generate_bins(self, n_bins):
-        x = 625**(1/float(n_bins))
-        bins = [int(32*x**n) for n in range(0, n_bins + 1)]
-        return bins
+        """Generate the original logarithmic bands, clamped to Nyquist."""
+        upper = min(self.MAX_FREQUENCY, self.SAMPLE_RATE // 2)
+        ratio = (upper / self.MIN_FREQUENCY) ** (1.0 / n_bins)
+        return np.array([self.MIN_FREQUENCY * ratio**index for index in range(n_bins + 1)])
 
-    def _calculate_levels(self, data, chunk, sample_rate):
-        # Return power array index corresponding to a particular frequency
-        def piff(val):
-            return int(self.chunk*val/self.sample_rate)
+    def _calculate_levels(self, samples):
+        """Map one PCM chunk to smoothed LED heights using logarithmic FFT bands."""
+        if len(samples) != self.CHUNK_SIZE:
+            raise ValueError(f"Expected {self.CHUNK_SIZE} samples, received {len(samples)}")
+        centered = samples - np.mean(samples)
+        spectrum = np.abs(np.fft.rfft(centered * self.window)) * (2.0 / self.window.sum())
+        heights = np.zeros(self.width, dtype=float)
+        for index, (low, high) in enumerate(zip(self.bin_edges[:-1], self.bin_edges[1:])):
+            band = spectrum[(self.frequencies >= low) & (self.frequencies < high)]
+            if band.size:
+                level_dbfs = 20.0 * np.log10(max(float(np.sqrt(np.mean(band**2))), 1e-12))
+                normalized = (level_dbfs - self.NOISE_FLOOR_DBFS) / (self.FULL_SCALE_DBFS - self.NOISE_FLOOR_DBFS)
+                heights[index] = normalized * self.height * self.BAND_WEIGHTS[index]
+        heights = np.clip(heights, 0, self.height)
+        self.levels = np.maximum(heights, self.levels * self.DECAY)
+        return self.levels.astype(int)
 
-        bins = self._generate_bins(self.driver.width)
-        # Weighting to account for difference between linear response of microphone vs non-linear response of human ears
-        weighting = [1, 1, 1, 1, 2, 3, 4, 4, 8, 8, 8, 20, 22, 24, 26, 30]
-        matrix = [None] * 16
+    @staticmethod
+    def _spectrum_colors():
+        return [(0, 255, 0)] * 11 + [(255, 255, 0)] * 3 + [(255, 0, 0)] * 2
 
-        # Gain multiplier
-        gain = 80.0
-        
-        # Convert raw data (ASCII string) to numpy array
-        data = unpack("%dh" % (len(data)/2), data)
-        data = np.array(data, dtype='h')
-        # Apply FFT - real data
-        fourier = np.fft.rfft(data)
-        # Remove last element in array to make it the same size as chunk
-        fourier = np.delete(fourier, len(fourier)-1)
-        # Find average 'amplitude' for specific frequency ranges in Hz
-        power = np.abs(fourier)
-        # print(f"Power: {power[piff(bins[1])]}")
+    def _open_capture(self):
+        capture = self.capture_factory(sample_rate=self.SAMPLE_RATE, channels=2, period_frames=self.CHUNK_SIZE)
+        capture.start()
+        self.capture = capture
+        logger.info("Spectrum analyzer capturing from %s at %d Hz", capture.device, self.SAMPLE_RATE)
 
-        for n in range(len(matrix)):
-            # print(f"piff: {piff(bins[n])}")
-            # print(f"Slice: {power[piff(bins[n]):piff(bins[n+1])]}")
-            matrix[n] = int(np.mean(power[piff(bins[n]):piff(bins[n+1]):1]))
-
-        # print(matrix)
-        # Tidy up column values for the LED matrix
-        matrix = np.divide(np.multiply(matrix, weighting), 1000000)
-        # Set floor at 0 and ceiling height of matrix
-        matrix = [int(n * gain) for n in matrix]
-        matrix = np.clip(matrix, 0, self.driver.height)
-        # print(matrix)
-        return matrix
-
-    def _generate_spectrums(self):
-        """ Returns a list of fun spectrum colors to pick from """
-        spectrum_GYR = [None] * 16
-        spectrum_GYR[0:10] = [(0, 255, 0)] * 11
-        spectrum_GYR[11:13] = [(255, 255, 0)] * 3
-        spectrum_GYR[14:15] = [(255, 0, 0)] * 2
-        return list([spectrum_GYR])
+    def _close_capture(self):
+        capture, self.capture = self.capture, None
+        if capture:
+            capture.close()
 
     def run(self):
-        spectrums = self._generate_spectrums()
-        # print(spectrums)
-
-        # Main loop
+        colors = self._spectrum_colors()
         while not self.should_stop():
-            start = time.time()
-            # Get microphone data
-            data = self.stream.read(self.chunk, exception_on_overflow=False)
-            logger.debug("Read audio chunk (%d bytes)", len(data))
-
-            # Process data into a display matrix
-            matrix = self._calculate_levels(data, self.chunk, self.sample_rate)
-
-            self.driver.clear(self.image)
-            for x in range(len(matrix)):
-                for y in range(0, int(matrix[x])):
-                    self.pixels[x, 15-y] = spectrums[0][y]
-            self.display()
-            stop = time.time()
-            fps = 1.0/(stop - start)
-            logger.debug("Spectrum FPS: %.2f", fps)
+            if self.capture is None:
+                try:
+                    self._open_capture()
+                except AudioCaptureError as error:
+                    logger.warning("Spectrum audio unavailable: %s", error)
+                    self.wait(2.0)
+                    continue
+            try:
+                start = time.monotonic()
+                levels = self._calculate_levels(self.capture.read(self.CHUNK_SIZE))
+                self.driver.clear(self.image)
+                for x, height in enumerate(levels):
+                    for y in range(height):
+                        self.pixels[x, self.height - 1 - y] = colors[y]
+                self.display()
+                logger.debug("Spectrum FPS: %.2f", 1.0 / max(time.monotonic() - start, 1e-6))
+            except AudioCaptureError as error:
+                logger.warning("Spectrum audio stream failed; reconnecting: %s", error)
+                self._close_capture()
+                self.wait(1.0)
 
     def cleanup(self):
-        self.stream.stop_stream()
-        self.stream.close()
-        self.pyaudio.terminate()
+        self._close_capture()
         super().cleanup()
