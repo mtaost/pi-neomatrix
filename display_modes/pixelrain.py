@@ -1,9 +1,6 @@
-import driver
-from PIL import Image
 from display_modes import module
 from numpy import linspace
-from datetime import datetime
-from time import sleep, time
+from time import time
 import random
 import logging
 
@@ -21,7 +18,6 @@ class PixelRain(module.Module):
         super().__init__(driver)
         self.color_pallete = self._generate_rainbow_colors(2000)
         self.brightness_choices = linspace(self.MIN_BRIGHTNESS, 1.0, 20)
-        random.seed(datetime.now())
         self.color_index = 0
         # self.pixel_index = 0
         # self.going_right = True

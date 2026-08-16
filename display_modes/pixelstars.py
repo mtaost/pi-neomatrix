@@ -1,9 +1,6 @@
-import driver
-from PIL import Image
 from display_modes import module
 from numpy import linspace
-from datetime import datetime
-from time import sleep, time
+from time import time
 import random
 import logging
 
@@ -25,7 +22,6 @@ class PixelStars(module.Module):
         self.color_pallete = self._generate_rainbow_colors(100)
         # self.color_pallete = [(255, 255, 255), (255, 255, 255)]
         self.brightness_choices = linspace(self.MIN_BRIGHTNESS, 1.0, 20)
-        random.seed(datetime.now())
         self.color_index = 0
         self.curr_density = self.DENSITY
         # self.pixel_index = 0
