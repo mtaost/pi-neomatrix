@@ -25,6 +25,13 @@ class PixelModeInitializationTests(unittest.TestCase):
         mode = PixelStars(FakeDriver())
         self.assertEqual(mode.image.size, (16, 16))
 
+    def test_pixel_stars_supports_fixed_and_gradient_colors(self):
+        mode = PixelStars(FakeDriver(), {"star_color_mode": "fixed", "star_fixed_color": "#123456"})
+        self.assertEqual(mode._spawn_color(0, 0), (18, 52, 86))
+
+        mode.update_settings({"star_color_mode": "rainbow_gradient", "rainbow_gradient_speed": 0})
+        self.assertNotEqual(mode._spawn_color(0, 0), mode._spawn_color(8, 8))
+
 
 if __name__ == "__main__":
     unittest.main()

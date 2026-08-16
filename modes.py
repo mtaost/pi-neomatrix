@@ -1,4 +1,4 @@
-from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PIXEL_RAIN_SETTINGS
+from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -45,7 +45,7 @@ def build_mode_registry():
 
     def stars(driver, options):
         from display_modes.pixelstars import PixelStars
-        return PixelStars(driver)
+        return PixelStars(driver, options)
 
     def fireworks(driver, options):
         from display_modes.fireworks import Fireworks
@@ -65,7 +65,7 @@ def build_mode_registry():
         ModeSpec("image", "Image Viewer", image, requires_asset=True),
         ModeSpec("thermal", "Thermal Camera", thermal, ("mlx90640",)),
         ModeSpec("rain", "Pixel Rain", rain, settings_schema=PIXEL_RAIN_SETTINGS),
-        ModeSpec("stars", "Pixel Stars", stars),
+        ModeSpec("stars", "Pixel Stars", stars, settings_schema=PIXEL_STARS_SETTINGS),
         ModeSpec("fireworks", "Fireworks", fireworks, settings_schema=FIREWORKS_SETTINGS),
         ModeSpec("tetris", "Tetris AI", tetris, ("tetris_ai",)),
         ModeSpec("off", "Display Off", off),

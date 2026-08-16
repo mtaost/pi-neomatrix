@@ -6,6 +6,8 @@ let modes = [];
 let selectedModeId = null;
 let automationFormInitialized = false;
 
+let modeSettingsTimer = null;
+let modeSettingsRequest = Promise.resolve();
 async function api(path, options = {}) {
   const response = await fetch(path, {headers: {"Content-Type": "application/json"}, ...options});
   const data = await response.json();
@@ -104,6 +106,37 @@ function syncColorModeControls(settingInputs, modeKey, relevantModes) {
   }
 }
 
+function settingsPayload(settingInputs) {
+  return Object.fromEntries(Object.entries(settingInputs).map(([key, input]) => [key, input.type === "checkbox" ? input.checked : input.value]));
+}
+
+function applyActiveModeSettings(mode, settingInputs) {
+  if (latestState?.mode !== mode.id) return;
+  modeSettingsRequest = modeSettingsRequest.catch(() => {}).then(async () => {
+    if (latestState?.mode !== mode.id) return;
+    try {
+      renderState(await api("/api/mode/settings", {method: "PATCH", body: JSON.stringify(settingsPayload(settingInputs))}));
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  });
+}
+
+function bindLiveModeSettings(mode, settingInputs) {
+  const applyNow = () => {
+    clearTimeout(modeSettingsTimer);
+    modeSettingsTimer = null;
+    applyActiveModeSettings(mode, settingInputs);
+  };
+  for (const input of Object.values(settingInputs)) {
+    input.addEventListener("input", () => {
+      clearTimeout(modeSettingsTimer);
+      modeSettingsTimer = setTimeout(applyNow, 125);
+    });
+    input.addEventListener("change", applyNow);
+  }
+}
+
 function createModeCard(mode) {
   const card = document.createElement("article");
   card.className = "mode-card";
@@ -122,7 +155,7 @@ function createModeCard(mode) {
   card.append(header);
   const description = document.createElement("p");
   description.className = "mode-description";
-  description.textContent = mode.requires_asset ? "Choose a bundled image or GIF below." : "Mode-specific controls will appear here as they are added.";
+  description.textContent = mode.requires_asset ? "Choose a bundled image or GIF below." : mode.settings_schema && Object.keys(mode.settings_schema).length ? "Changes apply immediately while this mode is running." : "Mode-specific controls will appear here as they are added.";
   card.append(description);
   const settings = document.createElement("div");
   settings.className = "mode-settings";
@@ -154,6 +187,7 @@ function createModeCard(mode) {
   const colorModeControls = {
     life: {modeKey: "alive_color_mode", relevantModes: {alive_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
     rain: {modeKey: "rain_color_mode", relevantModes: {rain_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
+    stars: {modeKey: "star_color_mode", relevantModes: {star_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
   };
   const colorControls = colorModeControls[mode.id];
   if (colorControls) {
@@ -161,13 +195,14 @@ function createModeCard(mode) {
     settingInputs[colorControls.modeKey].addEventListener("change", () => syncColorModeControls(settingInputs, colorControls.modeKey, colorControls.relevantModes));
   }
 
+  bindLiveModeSettings(mode, settingInputs);
   card.append(settings);
   const launch = document.createElement("button");
   launch.textContent = mode.id === "off" ? "Turn display off" : `Start ${mode.name}`;
   launch.onclick = async () => {
     try {
       if (mode.requires_asset && !assetSelect.value) throw new Error("Add an image or GIF to the res directory first.");
-      renderState(await api("/api/mode", {method: "POST", body: JSON.stringify({mode: mode.id, asset_id: assetSelect?.value, settings: Object.fromEntries(Object.entries(settingInputs).map(([key, input]) => [key, input.type === "checkbox" ? input.checked : input.value]))})}));
+      renderState(await api("/api/mode", {method: "POST", body: JSON.stringify({mode: mode.id, asset_id: assetSelect?.value, settings: settingsPayload(settingInputs)})}));
     } catch (error) { setStatus(error.message, true); }
   };
   card.append(launch);
@@ -175,6 +210,8 @@ function createModeCard(mode) {
 }
 
 function renderSelectedMode() {
+  clearTimeout(modeSettingsTimer);
+  modeSettingsTimer = null;
   const mode = modes.find(candidate => candidate.id === selectedModeId);
   const container = $("mode-card");
   container.replaceChildren();
