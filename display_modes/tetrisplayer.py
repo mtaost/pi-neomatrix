@@ -8,7 +8,7 @@ import time
 
 from PIL import Image
 
-from cold_clear import ColdClearBot
+from cold_clear import ColdClearBot, ColdClearBotDead
 from display_modes import module
 from display_modes.tetris_engine import TetrisGame
 from mode_settings import TETRIS_SETTINGS, normalize_settings
@@ -87,7 +87,12 @@ class TetrisPlayer(module.Module):
                 self._new_game()
             return
         if self.phase == "thinking":
-            move = self.bot.poll_move()
+            try:
+                move = self.bot.poll_move()
+            except ColdClearBotDead:
+                logger.info("Cold Clear cannot survive the current field; ending Tetris round.")
+                self._set_game_over()
+                return
             if move:
                 self.game.begin_bot_move(move, self.bot.add_next_piece)
                 self.phase = "playing" if not self.game.game_over else "game_over"

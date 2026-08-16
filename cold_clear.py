@@ -182,7 +182,7 @@ class ColdClearBot:
         if status == WAITING:
             return None
         if status == BOT_DEAD:
-            raise RuntimeError("Cold Clear bot stopped unexpectedly.")
+            raise ColdClearBotDead("Cold Clear cannot survive the current field.")
         if status != MOVE_PROVIDED:
             raise RuntimeError(f"Cold Clear returned an unknown poll status: {status}")
         return ColdClearMove(
@@ -208,3 +208,7 @@ class ColdClearBot:
     def _require_open(self):
         if not getattr(self, "_bot", None):
             raise RuntimeError("Cold Clear bot is closed.")
+
+
+class ColdClearBotDead(RuntimeError):
+    """Cold Clear found no surviving move for the current board."""

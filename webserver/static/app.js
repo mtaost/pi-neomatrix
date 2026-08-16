@@ -62,6 +62,16 @@ function populateAutomationForm(automation) {
   automationFormInitialized = true;
 }
 
+function sliderDecimalPlaces(step) {
+  const decimal = String(step).split(".")[1];
+  return decimal ? decimal.length : 0;
+}
+
+function invertedSliderValue(input, value) {
+  const inverted = Number(input.min) + Number(input.max) - Number(value);
+  return inverted.toFixed(sliderDecimalPlaces(input.step));
+}
+
 function createModeSetting(field, value) {
   const label = document.createElement("label");
   label.textContent = field.label;
@@ -79,8 +89,9 @@ function createModeSetting(field, value) {
     input.min = field.min;
     input.max = field.max;
     input.step = field.step;
+    if (field.inverse) input.dataset.inverse = "true";
   }
-  input.value = value;
+  input.value = field.inverse ? invertedSliderValue(input, value) : value;
   if (field.type === "boolean") input.checked = Boolean(value);
 
   label.append(input);
@@ -107,7 +118,7 @@ function syncColorModeControls(settingInputs, modeKey, relevantModes) {
 }
 
 function settingsPayload(settingInputs) {
-  return Object.fromEntries(Object.entries(settingInputs).map(([key, input]) => [key, input.type === "checkbox" ? input.checked : input.value]));
+  return Object.fromEntries(Object.entries(settingInputs).map(([key, input]) => [key, input.type === "checkbox" ? input.checked : input.dataset.inverse === "true" ? invertedSliderValue(input, input.value) : input.value]));
 }
 
 function applyActiveModeSettings(mode, settingInputs) {

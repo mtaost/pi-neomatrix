@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cold_clear import ColdClearBot, ColdClearMove, MOVE_CCW, MOVE_CW, MOVE_DROP
+from cold_clear import ColdClearBot, ColdClearBotDead, ColdClearMove, MOVE_CCW, MOVE_CW, MOVE_DROP
 from display_modes.tetris_engine import FallingPiece, QUEUE_LOOKAHEAD, TetrisGame
 from display_modes.tetrisplayer import GHOST_COLORS, TetrisPlayer
 
@@ -139,6 +139,7 @@ class _Driver:
 
 class _Bot:
     instances = []
+    raise_dead = False
 
     def __init__(self, pieces, strategy):
         self.pieces = tuple(pieces)
@@ -155,6 +156,8 @@ class _Bot:
         self.requests += 1
 
     def poll_move(self):
+        if _Bot.raise_dead:
+            raise ColdClearBotDead("no surviving move")
         return None
 
     def reset(self, *args):
@@ -167,6 +170,7 @@ class _Bot:
 class TetrisPlayerSettingsTests(unittest.TestCase):
     def setUp(self):
         _Bot.instances = []
+        _Bot.raise_dead = False
 
     def test_speed_and_garbage_update_live_while_strategy_restarts(self):
         player = TetrisPlayer(_Driver(), bot_factory=_Bot)
@@ -185,6 +189,13 @@ class TetrisPlayerSettingsTests(unittest.TestCase):
     def test_garbage_frequency_slider_runs_from_rare_to_frequent(self):
         self.assertEqual(TetrisPlayer._garbage_interval(1), 10)
         self.assertEqual(TetrisPlayer._garbage_interval(10), 1)
+
+    def test_bot_dead_ends_the_round_without_crashing_the_mode(self):
+        player = TetrisPlayer(_Driver(), bot_factory=_Bot)
+        _Bot.raise_dead = True
+        player._advance()
+        self.assertEqual(player.phase, "game_over")
+        player.cleanup()
 
     def test_draws_a_dim_ghost_at_the_projected_landing(self):
         player = TetrisPlayer(_Driver(), bot_factory=_Bot)

@@ -5,7 +5,7 @@ HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 GAME_OF_LIFE_SETTINGS = {
-    "iteration_delay": {"type": "range", "label": "Iteration speed", "help": "Seconds between generations. Lower values run faster.", "min": 0.02, "max": 1.0, "step": 0.01, "default": 0.05, "unit": "seconds"},
+    "iteration_delay": {"type": "range", "label": "Iteration speed", "help": "Higher values run faster.", "min": 0.02, "max": 1.0, "step": 0.01, "default": 0.05, "unit": "seconds", "inverse": True},
     "alive_color_mode": {"type": "select", "label": "Alive pixels", "help": "Choose a single shifting hue, a moving rainbow across living cells, or a fixed color.", "default": "rainbow_cycle", "choices": [{"value": "rainbow_cycle", "label": "Rainbow cycle"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "fixed", "label": "Fixed color"}]},
     "alive_fixed_color": {"type": "color", "label": "Fixed alive color", "help": "Used when Alive pixels is set to Fixed color.", "default": "#F00000"},
     "dead_color": {"type": "color", "label": "Dead pixel color", "help": "The background color for cells that are not alive.", "default": "#000000"},
@@ -15,7 +15,7 @@ GAME_OF_LIFE_SETTINGS = {
 
 
 PIXEL_RAIN_SETTINGS = {
-    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Seconds between rain updates. Lower values run faster.", "min": 0.01, "max": 0.2, "step": 0.01, "default": 0.04, "unit": "seconds"},
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Higher values run faster.", "min": 0.01, "max": 0.2, "step": 0.01, "default": 0.04, "unit": "seconds", "inverse": True},
     "density": {"type": "range", "label": "Rain density", "help": "The chance of a new drop appearing in each column.", "min": 1, "max": 1000, "step": 1, "default": 30, "unit": "per 1,000"},
     "persistence": {"type": "range", "label": "Trail persistence", "help": "Higher values keep each raindrop trail visible for longer.", "min": 0.1, "max": 0.99, "step": 0.01, "default": 0.75},
     "rain_color_mode": {"type": "select", "label": "Raindrop colors", "help": "Choose a single shifting hue, a rainbow across columns, or a fixed color.", "default": "rainbow_cycle", "choices": [{"value": "rainbow_cycle", "label": "Rainbow cycle"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "fixed", "label": "Fixed color"}]},
@@ -26,7 +26,7 @@ PIXEL_RAIN_SETTINGS = {
 
 
 PIXEL_STARS_SETTINGS = {
-    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Seconds between star updates. Lower values run faster.", "min": 0.01, "max": 0.2, "step": 0.01, "default": 0.03, "unit": "seconds"},
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Higher values run faster.", "min": 0.01, "max": 0.2, "step": 0.01, "default": 0.03, "unit": "seconds", "inverse": True},
     "density": {"type": "range", "label": "Star density", "help": "The chance of a new star appearing in each pixel.", "min": 1, "max": 100000, "step": 1, "default": 5, "unit": "per 100,000"},
     "persistence": {"type": "range", "label": "Star persistence", "help": "Higher values keep stars visible for longer.", "min": 0.5, "max": 0.999, "step": 0.001, "default": 0.99},
     "burst_chance": {"type": "range", "label": "Burst frequency", "help": "The chance of a denser star burst on each frame.", "min": 0, "max": 100, "step": 1, "default": 1, "unit": "per 10,000"},
@@ -39,7 +39,7 @@ PIXEL_STARS_SETTINGS = {
 
 
 FIREWORKS_SETTINGS = {
-    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Seconds between frames. Lower values animate faster.", "min": 0.02, "max": 0.2, "step": 0.01, "default": 0.05, "unit": "seconds"},
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Higher values animate faster.", "min": 0.02, "max": 0.2, "step": 0.01, "default": 0.05, "unit": "seconds", "inverse": True},
     "launch_rate": {"type": "range", "label": "Launch frequency", "help": "Average rocket launches per second.", "min": 0.05, "max": 2.0, "step": 0.05, "default": 0.35, "unit": "launches/sec"},
     "burst_size": {"type": "range", "label": "Burst size", "help": "Number of particles created when a rocket explodes.", "min": 8, "max": 64, "step": 1, "default": 26, "unit": "particles"},
     "trail_persistence": {"type": "range", "label": "Trail persistence", "help": "Higher values keep trails visible for longer.", "min": 0.1, "max": 0.95, "step": 0.01, "default": 0.7},
@@ -53,7 +53,7 @@ FIREWORKS_SETTINGS = {
 
 
 TETRIS_SETTINGS = {
-    "animation_speed": {"type": "range", "label": "Animation speed", "help": "Seconds between Tetris actions. Lower values animate faster.", "min": 0.02, "max": 0.375, "step": 0.01, "default": 0.08, "unit": "seconds"},
+    "animation_speed": {"type": "range", "label": "Animation speed", "help": "Higher values animate faster.", "min": 0.02, "max": 0.375, "step": 0.01, "default": 0.08, "unit": "seconds", "inverse": True},
     "strategy": {"type": "select", "label": "AI strategy", "help": "Changing strategy starts a fresh game.", "default": "balanced", "choices": [{"value": "balanced", "label": "Balanced"}, {"value": "fast", "label": "Fast"}, {"value": "perfect_clear", "label": "Perfect Clear"}]},
     "simulated_garbage": {"type": "boolean", "label": "Simulate garbage", "help": "Add grey garbage rows between pieces.", "default": False},
     "garbage_frequency": {"type": "range", "label": "Garbage frequency", "help": "Higher values add garbage more often: 1 is one row every 10 locks; 10 is one row every lock.", "min": 1, "max": 10, "step": 1, "default": 1, "unit": "frequency"},
