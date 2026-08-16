@@ -14,6 +14,17 @@ GAME_OF_LIFE_SETTINGS = {
 }
 
 
+PIXEL_RAIN_SETTINGS = {
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Seconds between rain updates. Lower values run faster.", "min": 0.01, "max": 0.2, "step": 0.01, "default": 0.04, "unit": "seconds"},
+    "density": {"type": "range", "label": "Rain density", "help": "The chance of a new drop appearing in each column.", "min": 1, "max": 1000, "step": 1, "default": 30, "unit": "per 1,000"},
+    "persistence": {"type": "range", "label": "Trail persistence", "help": "Higher values keep each raindrop trail visible for longer.", "min": 0.1, "max": 0.99, "step": 0.01, "default": 0.75},
+    "rain_color_mode": {"type": "select", "label": "Raindrop colors", "help": "Choose a single shifting hue, a rainbow across columns, or a fixed color.", "default": "rainbow_cycle", "choices": [{"value": "rainbow_cycle", "label": "Rainbow cycle"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "fixed", "label": "Fixed color"}]},
+    "rain_fixed_color": {"type": "color", "label": "Fixed raindrop color", "help": "Used when Raindrop colors is set to Fixed color.", "default": "#00BFFF"},
+    "rainbow_cycle_speed": {"type": "range", "label": "Rainbow cycle speed", "help": "Hue cycles per second for the single-color rainbow effect.", "min": 0.0, "max": 2.0, "step": 0.01, "default": 0.25, "unit": "cycles/sec"},
+    "rainbow_gradient_speed": {"type": "range", "label": "Rainbow gradient speed", "help": "Hue cycles per second for the rainbow gradient effect.", "min": 0.0, "max": 2.0, "step": 0.01, "default": 0.15, "unit": "cycles/sec"},
+}
+
+
 FIREWORKS_SETTINGS = {
     "frame_delay": {"type": "range", "label": "Animation speed", "help": "Seconds between frames. Lower values animate faster.", "min": 0.02, "max": 0.2, "step": 0.01, "default": 0.05, "unit": "seconds"},
     "launch_rate": {"type": "range", "label": "Launch frequency", "help": "Average rocket launches per second.", "min": 0.05, "max": 2.0, "step": 0.05, "default": 0.35, "unit": "launches/sec"},

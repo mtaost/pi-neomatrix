@@ -86,10 +86,9 @@ function createModeSetting(field, value) {
   return {element: label, input};
 }
 
-function syncLifeColorControls(settingInputs) {
-  const colorMode = settingInputs.alive_color_mode;
+function syncColorModeControls(settingInputs, modeKey, relevantModes) {
+  const colorMode = settingInputs[modeKey];
   if (!colorMode) return;
-  const relevantModes = {alive_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"};
   for (const [key, requiredMode] of Object.entries(relevantModes)) {
     const input = settingInputs[key];
     if (!input) continue;
@@ -147,9 +146,14 @@ function createModeCard(mode) {
     settings.append(control.element);
   }
 
-  if (mode.id === "life") {
-    syncLifeColorControls(settingInputs);
-    settingInputs.alive_color_mode.addEventListener("change", () => syncLifeColorControls(settingInputs));
+  const colorModeControls = {
+    life: {modeKey: "alive_color_mode", relevantModes: {alive_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
+    rain: {modeKey: "rain_color_mode", relevantModes: {rain_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
+  };
+  const colorControls = colorModeControls[mode.id];
+  if (colorControls) {
+    syncColorModeControls(settingInputs, colorControls.modeKey, colorControls.relevantModes);
+    settingInputs[colorControls.modeKey].addEventListener("change", () => syncColorModeControls(settingInputs, colorControls.modeKey, colorControls.relevantModes));
   }
 
   card.append(settings);
