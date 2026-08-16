@@ -1,4 +1,4 @@
-from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS
+from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS, TETRIS_SETTINGS
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -53,7 +53,7 @@ def build_mode_registry():
 
     def tetris(driver, options):
         from display_modes.tetrisplayer import TetrisPlayer
-        return TetrisPlayer(driver)
+        return TetrisPlayer(driver, options)
 
     def off(driver, options):
         from display_modes.displayoff import DisplayOff
@@ -67,7 +67,7 @@ def build_mode_registry():
         ModeSpec("rain", "Pixel Rain", rain, settings_schema=PIXEL_RAIN_SETTINGS),
         ModeSpec("stars", "Pixel Stars", stars, settings_schema=PIXEL_STARS_SETTINGS),
         ModeSpec("fireworks", "Fireworks", fireworks, settings_schema=FIREWORKS_SETTINGS),
-        ModeSpec("tetris", "Tetris AI", tetris, ("tetris_ai",)),
+        ModeSpec("tetris", "Tetris AI", tetris, ("cold_clear",), settings_schema=TETRIS_SETTINGS),
         ModeSpec("off", "Display Off", off),
     ]
     return {spec.id: spec for spec in specs}

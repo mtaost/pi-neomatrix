@@ -52,6 +52,15 @@ FIREWORKS_SETTINGS = {
 }
 
 
+TETRIS_SETTINGS = {
+    "animation_speed": {"type": "range", "label": "Animation speed", "help": "Seconds between Tetris actions. Lower values animate faster.", "min": 0.02, "max": 0.375, "step": 0.01, "default": 0.08, "unit": "seconds"},
+    "strategy": {"type": "select", "label": "AI strategy", "help": "Changing strategy starts a fresh game.", "default": "balanced", "choices": [{"value": "balanced", "label": "Balanced"}, {"value": "fast", "label": "Fast"}, {"value": "perfect_clear", "label": "Perfect Clear"}]},
+    "simulated_garbage": {"type": "boolean", "label": "Simulate garbage", "help": "Add grey garbage rows between pieces.", "default": False},
+    "garbage_frequency": {"type": "range", "label": "Garbage frequency", "help": "Higher values add garbage more often: 1 is one row every 10 locks; 10 is one row every lock.", "min": 1, "max": 10, "step": 1, "default": 1, "unit": "frequency"},
+    "garbage_lines": {"type": "range", "label": "Garbage lines", "help": "Rows added at each garbage event.", "min": 1, "max": 6, "step": 1, "default": 1, "unit": "rows"},
+    "garbage_messiness": {"type": "range", "label": "Garbage messiness", "help": "Chance that the hole moves to a new column on the next garbage row.", "min": 0, "max": 100, "step": 1, "default": 30, "unit": "%"},
+}
+
 def default_settings(schema):
     return {key: field["default"] for key, field in schema.items()}
 
@@ -99,4 +108,3 @@ def normalize_settings(schema, values=None, base=None):
             raise ValueError(f"{field['label']} must be from {field['min']} to {field['max']}.")
         result[key] = number
     return result
-

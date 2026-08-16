@@ -69,7 +69,7 @@ Required hardware:
 #### System packages
 ```bash
 sudo apt update
-sudo apt install -y python3-pip python3-dev libopenjp2-7 python3-pyaudio
+sudo apt install -y python3-pip python3-dev libopenjp2-7 python3-pyaudio cargo rustc
 ```
 
 #### Python packages
@@ -83,6 +83,19 @@ Note: The `--break-system-packages` flag is required on modern Raspberry Pi OS (
 ### Running the Display Service
 
 The display is controlled from a mobile-friendly website hosted by the Pi. Start it manually while developing:
+
+#### Cold Clear Tetris bot
+
+The Tetris mode uses the pinned Cold Clear source submodule and a locally built
+ARM64 shared library. Build it once after cloning or updating the project:
+
+```bash
+git submodule update --init --recursive
+bash scripts/build-cold-clear.sh
+```
+
+The Display page exposes animation speed, Balanced/Fast/Perfect Clear strategy,
+and simulated-garbage controls.
 
 ```bash
 sudo python3 main.py
