@@ -31,8 +31,11 @@ class ThermalCamera(module.Module):
     I2C_FREQUENCY = 800000
     RETRY_DELAY = 0.25
 
-    def __init__(self, driver, options=None, sensor=None, i2c=None):
+    def __init__(self, driver, options=None, sensor=None, i2c=None, thermal_service=None):
         super().__init__(driver)
+        options = dict(options or {})
+        thermal_service = options.pop("thermal_service", thermal_service)
+        self.thermal_service = thermal_service
         self._sensor_lock = threading.Lock()
         self._owns_i2c = False
         self.frame_buffer = [0.0] * self.FRAME_SIZE
@@ -44,11 +47,15 @@ class ThermalCamera(module.Module):
         self._temperature_range = (20.0, 40.0)
         self._range_initialized = False
 
+        self._last_frame_timestamp = None
         self.update_settings(options)
         self.mlx, self.i2c = self._initialize_sensor(sensor, i2c)
         self._apply_refresh_rate()
 
     def _initialize_sensor(self, sensor, i2c):
+        if self.thermal_service is not None:
+            logger.info("Using shared MLX90640 thermal service")
+            return None, None
         if sensor is not None:
             logger.info("Using injected MLX90640 sensor")
             return sensor, i2c
@@ -66,6 +73,9 @@ class ThermalCamera(module.Module):
         return sensor, i2c
 
     def _apply_refresh_rate(self):
+        if self.thermal_service is not None:
+            self.thermal_service.set_refresh_rate(self.settings["refresh_rate"])
+            return
         if not hasattr(self.mlx, "refresh_rate"):
             return
         rate = int(self.settings["refresh_rate"])
@@ -175,8 +185,16 @@ class ThermalCamera(module.Module):
 
     def _read_frame(self):
         try:
-            with self._sensor_lock:
-                self.mlx.getFrame(self.frame_buffer)
+            if self.thermal_service is not None:
+                latest = self.thermal_service.get_latest_frame()
+                if latest is None:
+                    raise ValueError("MLX90640 has not produced a frame yet")
+                frame, timestamp = latest
+                self.frame_buffer = list(frame)
+                self._last_frame_timestamp = timestamp
+            else:
+                with self._sensor_lock:
+                    self.mlx.getFrame(self.frame_buffer)
             if len(self.frame_buffer) != self.FRAME_SIZE:
                 raise ValueError(f"MLX90640 returned {len(self.frame_buffer)} values; expected {self.FRAME_SIZE}")
             if not self._valid_temperatures():

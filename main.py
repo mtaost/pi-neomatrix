@@ -11,6 +11,7 @@ from controller import DisplayController
 from lifecycle import install_shutdown_handlers
 from logging_setup import configure_logging
 from sensors import BH1750Sensor, SensorService
+from thermal_sensor import ThermalSensorService
 from webserver.app import create_app
 
 
@@ -37,6 +38,11 @@ def build_controller(config_path=None, driver_factory=driver.MatrixDriver):
         controller.attach_sensor_service(service, available=True, name=sensor.name)
     except Exception as error:
         controller.attach_sensor_service(None, available=False, name="BH1750", error=str(error))
+    try:
+        thermal_service = ThermalSensorService(on_frame=controller.record_thermal_frame, on_error=controller.record_thermal_error)
+        controller.attach_thermal_service(thermal_service, available=True)
+    except Exception as error:
+        controller.attach_thermal_service(None, available=False, name="MLX90640", error=str(error))
     return controller
 
 

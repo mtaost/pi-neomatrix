@@ -186,6 +186,64 @@ class DisplayControllerTests(unittest.TestCase):
         controller.record_sensor_reading(0, 104)
         self.assertEqual(controller.get_state()["sleep_reason"], "manual_override")
 
+    def test_occupancy_standby_keeps_power_on_and_wakes_on_presence(self):
+        controller = self.make_controller()
+        class ThermalStub:
+            def stop(self):
+                return None
+
+        controller.attach_thermal_service(ThermalStub(), available=True)
+        controller.update_settings({"occupancy": {"enabled": True, "minimum_region_size": 4, "absence_dwell_seconds": 1, "presence_dwell_seconds": 1, "startup_calibration_seconds": 0}})
+        detector_clock = [0.0]
+        controller._occupancy_detector._clock = lambda: detector_clock[0]
+        empty = [20.0] * 768
+        warm = list(empty)
+        for row in range(8, 14):
+            for column in range(12, 18):
+                warm[row * 32 + column] = 28.0
+
+        controller.record_thermal_frame(empty, 100)
+        detector_clock[0] = 1
+        controller.record_thermal_frame(empty, 101)
+        self.assertTrue(controller.get_state()["power"])
+        self.assertEqual(controller.get_state()["sleep_reason"], "occupancy_empty")
+        self.assertTrue(controller.get_state()["sleeping"])
+
+        detector_clock[0] = 2
+        controller.record_thermal_frame(warm, 102)
+        detector_clock[0] = 3
+        controller.record_thermal_frame(warm, 103)
+        state = controller.get_state()
+        self.assertTrue(state["occupancy"]["present"])
+        self.assertFalse(state["sleeping"])
+        self.assertEqual(state["sleep_reason"], "automation_disabled")
+
+    def test_occupancy_disables_ambient_sleep_but_keeps_lux_dimming(self):
+        controller = self.make_controller()
+        class ThermalStub:
+            def stop(self):
+                return None
+
+        controller.attach_thermal_service(ThermalStub(), available=True)
+        controller.update_settings({
+            "automation": {"enabled": True, "sleep_lux": 5, "wake_lux": 10, "sleep_dwell_seconds": 1, "wake_dwell_seconds": 1, "poll_seconds": 1, "min_brightness": 0.2, "max_lux": 100, "manual_override_policy": "always", "manual_override_minutes": 1},
+            "occupancy": {"enabled": True, "startup_calibration_seconds": 0, "presence_dwell_seconds": 1},
+        })
+        detector_clock = [0.0]
+        controller._occupancy_detector._clock = lambda: detector_clock[0]
+        warm = [20.0] * 768
+        for row in range(8, 14):
+            for column in range(12, 18):
+                warm[row * 32 + column] = 28.0
+        controller.record_sensor_reading(0, 100)
+        controller.record_thermal_frame(warm, 100)
+        detector_clock[0] = 1
+        controller.record_thermal_frame(warm, 101)
+        state = controller.get_state()
+        self.assertFalse(state["sleeping"])
+        self.assertEqual(state["sleep_reason"], "ambient_active")
+        self.assertEqual(state["effective_brightness"], 0.2)
+
 
 class LifecycleTests(unittest.TestCase):
     @mock.patch("lifecycle.signal.signal")
@@ -209,15 +267,26 @@ except ImportError:
 @unittest.skipUnless(FLASK_AVAILABLE, "Flask is not installed in this environment")
 class ApiTests(unittest.TestCase):
     def test_api_validates_mode_and_power_requests(self):
-        controller = DisplayController(FakeDriver(), ConfigStore(Path(tempfile.gettempdir()) / "neomatrix-api-test.json"), AssetCatalog(Path(tempfile.gettempdir()) / "none"), {"fake": ModeSpec("fake", "Fake", fake_factory)})
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        controller = DisplayController(FakeDriver(), ConfigStore(root / "config.json"), AssetCatalog(root / "none"), {"fake": ModeSpec("fake", "Fake", fake_factory)})
         self.addCleanup(controller.shutdown)
         client = create_app(controller).test_client()
         self.assertIn(b"Display modes", client.get("/").data)
         self.assertIn(b"Ambient automation", client.get("/automation").data)
         self.assertEqual(client.get("/api/state").get_json()["error"], None)
+        occupancy = client.get("/api/state").get_json()["state"]["occupancy"]
+        self.assertFalse(occupancy["enabled"])
+        self.assertEqual(occupancy["temperature_delta_f"], 4.0)
+        self.assertEqual(occupancy["minimum_region_size"], 12)
         self.assertEqual(client.post("/api/mode", json={"mode": "unknown"}).status_code, 400)
         self.assertEqual(client.post("/api/power", json={"on": "yes"}).status_code, 400)
         self.assertEqual(client.patch("/api/settings", json={"brightness": 2}).status_code, 400)
+        response = client.patch("/api/settings", json={"occupancy": {"enabled": True, "temperature_delta_f": 5}})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["state"]["occupancy"]["enabled"])
+        self.assertEqual(client.patch("/api/settings", json={"occupancy": {"minimum_region_size": 0}}).status_code, 400)
 
 
 if __name__ == "__main__":

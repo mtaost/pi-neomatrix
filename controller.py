@@ -10,6 +10,7 @@ from assets import AssetCatalog
 from config import ConfigStore
 from layers import BrightnessLayer, SleepLayer
 from modes import build_mode_registry
+from occupancy import OccupancyDetector
 
 
 logger = logging.getLogger(__name__)
@@ -35,11 +36,18 @@ class DisplayController:
         self._render_stop_event = threading.Event()
         self._render_thread = None
         self._sensor_service = None
+        self._thermal_service = None
         self._shutdown = False
         self._sensor = {"available": False, "name": "BH1750", "lux": None, "updated_at": None, "error": "Sensor not initialized"}
         self._sleeping = False
+        self._ambient_sleeping = False
+        self._occupancy_sleeping = False
         self._dark_since = None
         self._bright_since = None
+        occupancy_settings = {key: value for key, value in self._config.get("occupancy", {}).items() if key != "enabled"}
+        self._occupancy_detector = OccupancyDetector(occupancy_settings)
+        self._occupancy = self._occupancy_detector.state()
+        self._thermal = {"available": False, "updated_at": None, "refresh_rate": None, "error": "Sensor not initialized"}
         if hasattr(driver, "set_brightness"):
             driver.set_brightness(1.0)
 
@@ -50,6 +58,8 @@ class DisplayController:
             self._render_thread.start()
         if self._sensor_service:
             self._sensor_service.start()
+        if self._thermal_service:
+            self._thermal_service.start()
         mode_id = self._config.get("active_mode")
         if mode_id:
             try:
@@ -65,6 +75,7 @@ class DisplayController:
                 return
             self._shutdown = True
             sensor_service = self._sensor_service
+            thermal_service = self._thermal_service
             logger.info("Stopping display controller")
             render_thread = self._render_thread
         try:
@@ -73,6 +84,8 @@ class DisplayController:
                 self._render_stop_event.set()
             if sensor_service:
                 sensor_service.stop()
+            if thermal_service:
+                thermal_service.stop()
             if render_thread:
                 render_thread.join(timeout=2)
         finally:
@@ -92,6 +105,18 @@ class DisplayController:
             else:
                 logger.warning("Sensor unavailable: %s", error or name)
 
+    def attach_thermal_service(self, service, available=True, name="MLX90640", error=None):
+        with self._lock:
+            self._thermal_service = service
+            if service is not None and hasattr(service, "set_callbacks"):
+                service.set_callbacks(self.record_thermal_frame, self.record_thermal_error)
+            self._thermal.update({"available": available, "error": error})
+            self._occupancy["error"] = error
+            if available:
+                logger.info("Thermal sensor available: %s", name)
+            else:
+                logger.warning("Thermal sensor unavailable: %s", error or name)
+
     def record_sensor_reading(self, lux, timestamp=None):
         with self._lock:
             self._sensor.update({"available": True, "lux": float(lux), "updated_at": timestamp or time.time(), "error": None})
@@ -99,6 +124,23 @@ class DisplayController:
     def record_sensor_error(self, message):
         with self._lock:
             self._sensor["error"] = str(message)
+
+    def record_thermal_frame(self, frame, timestamp=None):
+        with self._lock:
+            self._occupancy = self._occupancy_detector.process(frame, timestamp)
+            self._thermal.update({"available": True, "updated_at": timestamp or time.time(), "error": None})
+            self._occupancy["error"] = None
+            self._occupancy["available"] = True
+            self._occupancy_sleeping = bool(
+                self._config["occupancy"]["enabled"]
+                and not self._occupancy["present"]
+                and not self._occupancy["calibrating"]
+            )
+
+    def record_thermal_error(self, message):
+        with self._lock:
+            self._thermal["error"] = str(message)
+            self._occupancy["error"] = str(message)
 
     def poll_seconds(self):
         with self._lock:
@@ -117,6 +159,8 @@ class DisplayController:
         spec = self.registry[mode_id]
         mode_settings = normalize_settings(spec.settings_schema, settings)
         options = dict(mode_settings)
+        if mode_id == "thermal" and self._thermal_service is not None:
+            options["thermal_service"] = self._thermal_service
         if spec.requires_asset:
             path = self.assets.resolve(asset_id)
             options.update({"asset_id": asset_id, "asset_path": path})
@@ -199,7 +243,7 @@ class DisplayController:
     def update_settings(self, changes):
         if not isinstance(changes, dict):
             raise ValueError("Settings must be a JSON object.")
-        unknown = set(changes) - {"brightness", "automation"}
+        unknown = set(changes) - {"brightness", "automation", "occupancy"}
         if unknown:
             raise ValueError(f"Unknown setting: {sorted(unknown)[0]}")
         with self._lock:
@@ -210,6 +254,9 @@ class DisplayController:
             if "automation" in changes:
                 self._update_automation_locked(changes["automation"])
                 logger.info("Ambient automation settings updated")
+            if "occupancy" in changes:
+                self._update_occupancy_locked(changes["occupancy"])
+                logger.info("Occupancy automation settings updated")
             self._persist_locked()
         return self.get_state()
 
@@ -217,6 +264,8 @@ class DisplayController:
         with self._lock:
             now = time.time()
             effective_brightness, sleep_reason = self._policy_locked(now)
+            occupancy_state = copy.deepcopy(self._config["occupancy"])
+            occupancy_state.update(copy.deepcopy(self._occupancy))
             return {
                 "mode": self._active_mode_id,
                 "mode_options": copy.deepcopy(self._config["active_mode_options"]),
@@ -229,6 +278,8 @@ class DisplayController:
                 "automation": copy.deepcopy(self._config["automation"]),
                 "manual_override": self._manual_override_state_locked(now),
                 "sensor": copy.deepcopy(self._sensor),
+                "thermal": copy.deepcopy(self._thermal),
+                "occupancy": occupancy_state,
             }
 
     def _run_mode(self, mode_id, mode):
@@ -282,30 +333,69 @@ class DisplayController:
         if not self._config["power"]:
             self._set_sleeping_locked(True)
             return 0.0, "manual_off"
+        override = self._manual_override_state_locked(now)
+        if override["active"]:
+            self._ambient_sleeping = False
+            self._occupancy_sleeping = False
+            self._set_sleeping_locked(False)
+            return self._config["user_brightness"], "manual_override"
+
+        occupancy = self._config["occupancy"]
+        occupancy_configured = occupancy["enabled"]
+        if occupancy_configured:
+            # Occupancy owns the sleep decision when enabled. Keep the
+            # ambient sensor available for brightness mapping below.
+            self._ambient_sleeping = False
+            self._dark_since = None
+            self._bright_since = None
+            ambient_sleeping = False
+        else:
+            ambient_sleeping = self._ambient_policy_locked(now)
+        occupancy_enabled = occupancy["enabled"] and self._thermal["available"]
+        if not occupancy_enabled:
+            self._occupancy_sleeping = False
+        sleeping = ambient_sleeping or self._occupancy_sleeping
+        self._set_sleeping_locked(sleeping)
+        if sleeping:
+            if ambient_sleeping and self._occupancy_sleeping:
+                return 0.0, "ambient_dark_and_occupancy_empty"
+            return 0.0, "ambient_dark" if ambient_sleeping else "occupancy_empty"
+
+        sensor_lux = self._sensor["lux"]
+        brightness = self._ambient_brightness_locked(sensor_lux) if self._config["automation"]["enabled"] and sensor_lux is not None else self._config["user_brightness"]
+        if not self._config["automation"]["enabled"]:
+            reason = "automation_disabled"
+        elif sensor_lux is None:
+            reason = "sensor_unavailable"
+        else:
+            reason = "ambient_active"
+        return brightness, reason
+
+    def _ambient_policy_locked(self, now):
         automation = self._config["automation"]
         sensor_lux = self._sensor["lux"]
         if not automation["enabled"] or sensor_lux is None:
-            self._set_sleeping_locked(False)
-            return self._config["user_brightness"], "automation_disabled" if not automation["enabled"] else "sensor_unavailable"
-        override = self._manual_override_state_locked(now)
-        if override["active"]:
-            self._set_sleeping_locked(False)
-            return self._ambient_brightness_locked(sensor_lux), "manual_override"
-        if self._sleeping:
+            self._ambient_sleeping = False
+            self._dark_since = None
+            self._bright_since = None
+            return False
+        if self._ambient_sleeping:
             if sensor_lux >= automation["wake_lux"]:
                 self._bright_since = self._bright_since or now
                 if now - self._bright_since >= automation["wake_dwell_seconds"]:
-                    self._set_sleeping_locked(False)
+                    self._ambient_sleeping = False
+                    self._bright_since = None
             else:
                 self._bright_since = None
         else:
             if sensor_lux <= automation["sleep_lux"]:
                 self._dark_since = self._dark_since or now
                 if now - self._dark_since >= automation["sleep_dwell_seconds"]:
-                    self._set_sleeping_locked(True)
+                    self._ambient_sleeping = True
+                    self._dark_since = None
             else:
                 self._dark_since = None
-        return (0.0 if self._sleeping else self._ambient_brightness_locked(sensor_lux), "ambient_dark" if self._sleeping else "ambient_active")
+        return self._ambient_sleeping
 
     def _set_sleeping_locked(self, sleeping):
         if self._sleeping != sleeping:
@@ -397,8 +487,31 @@ class DisplayController:
             raise ValueError("max_lux must be greater than wake_lux.")
         self._dark_since = None
         self._bright_since = None
+        self._ambient_sleeping = False
         if "manual_override_policy" in values:
             self._record_manual_interaction_locked()
+
+    def _update_occupancy_locked(self, values):
+        if not isinstance(values, dict):
+            raise ValueError("Occupancy settings must be an object.")
+        allowed = {"enabled", "temperature_delta_f", "minimum_region_size", "absence_dwell_seconds", "presence_dwell_seconds", "startup_calibration_seconds", "edge_exclusion"}
+        unknown = set(values) - allowed
+        if unknown:
+            raise ValueError(f"Unknown occupancy setting: {sorted(unknown)[0]}")
+        if "enabled" in values and not isinstance(values["enabled"], bool):
+            raise ValueError("Occupancy enabled must be a boolean.")
+        detector_values = {key: value for key, value in values.items() if key != "enabled"}
+        if detector_values:
+            self._occupancy_detector.update_settings(detector_values)
+        occupancy = self._config["occupancy"]
+        if "enabled" in values:
+            occupancy["enabled"] = values["enabled"]
+        for key in detector_values:
+            occupancy[key] = self._occupancy_detector.settings[key]
+        if not occupancy["enabled"]:
+            self._occupancy_sleeping = False
+        elif self._thermal["available"] and not self._occupancy["calibrating"]:
+            self._occupancy_sleeping = not self._occupancy["present"]
 
     def _persist_locked(self):
         self.config_store.save(self._config)

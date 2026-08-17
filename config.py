@@ -24,6 +24,15 @@ DEFAULT_CONFIG = {
         "manual_override_policy": "timed",
         "manual_override_minutes": 30,
     },
+    "occupancy": {
+        "enabled": False,
+        "temperature_delta_f": 4.0,
+        "minimum_region_size": 12,
+        "absence_dwell_seconds": 60,
+        "presence_dwell_seconds": 3,
+        "startup_calibration_seconds": 10,
+        "edge_exclusion": 1,
+    },
 }
 
 

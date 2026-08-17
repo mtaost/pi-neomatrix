@@ -32,8 +32,9 @@
       <h2>Ambient automation</h2>
       <p class="muted">When enabled, the BH1750 light sensor can dim the display as the room gets darker and pause it when the room stays dark.</p>
       <label class="toggle"><input id="automation-enabled" type="checkbox"> Enable ambient sleep and brightness</label>
-      <p class="help">Turning this off leaves the display at the brightness chosen on the Display page and prevents automatic sleeping.</p>
+      <p class="help">Turning this off leaves the display at the brightness chosen on the Display page and prevents automatic sleeping. When presence standby is enabled, this sensor still dims the display but does not put it to sleep.</p>
 
+      <div id="ambient-settings">
       <section class="settings-section" aria-labelledby="sleep-wake-title">
         <h3 id="sleep-wake-title">Sleep & wake</h3>
         <div class="settings-grid">
@@ -60,11 +61,33 @@
           <label>Timed override (minutes)<input id="override-minutes" type="number" min="1"><span class="help">For Timed override, how long a manual change keeps the display awake before automation resumes.</span></label>
         </div>
       </section>
+      </div>
       <button id="save-automation">Save automation settings</button>
     </section>
     <section class="card">
+      <h2>Presence standby</h2>
+      <p class="muted">The MLX90640 thermal camera can pause the active display when a person is no longer detected, then wake it when someone returns.</p>
+      <label class="toggle"><input id="occupancy-enabled" type="checkbox"> Enable occupancy standby</label>
+      <p class="help">The detector keeps running while the display is asleep. It is disabled by default and stores only the latest in-memory frame.</p>
+
+      <div id="occupancy-settings">
+      <section class="settings-section" aria-labelledby="occupancy-detection-title">
+        <h3 id="occupancy-detection-title">Detection</h3>
+        <div class="settings-grid">
+          <label>Warmth above background (°F)<input id="occupancy-delta" type="number" min="0.5" max="20" step="0.5"><span class="help">A warm connected region must exceed the robust room-temperature background by this amount.</span></label>
+          <label>Minimum warm region (pixels)<input id="occupancy-region" type="number" min="1" max="768" step="1"><span class="help">Increase this to ignore small warm objects.</span></label>
+          <label>Absence dwell (seconds)<input id="occupancy-absence-dwell" type="number" min="1"><span class="help">How long no qualifying region must remain before standby.</span></label>
+          <label>Presence wake dwell (seconds)<input id="occupancy-presence-dwell" type="number" min="1"><span class="help">How long a qualifying region must remain before wake.</span></label>
+          <label>Startup calibration (seconds)<input id="occupancy-calibration" type="number" min="0"><span class="help">Allow the background estimate to settle after startup.</span></label>
+          <label>Edge exclusion (pixels)<input id="occupancy-edge" type="number" min="0" max="12" step="1"><span class="help">Ignore this many pixels around the frame edge.</span></label>
+        </div>
+      </section>
+      </div>
+      <button id="save-occupancy">Save presence settings</button>
+    </section>
+    <section class="card">
       <h2>Sensor status</h2>
-      <dl><div><dt>Status</dt><dd id="sensor-status">—</dd></div><div><dt>Ambient light</dt><dd id="sensor-lux">—</dd></div><div><dt>Display output</dt><dd id="effective-brightness">—</dd></div></dl>
+      <dl><div><dt>Ambient sensor</dt><dd id="sensor-status">—</dd></div><div><dt>Ambient light</dt><dd id="sensor-lux">—</dd></div><div><dt>Thermal sensor</dt><dd id="thermal-status">—</dd></div><div><dt>Presence</dt><dd id="occupancy-status">—</dd></div><div><dt>Detector confidence</dt><dd id="occupancy-confidence">—</dd></div><div><dt>Background / maximum</dt><dd id="occupancy-temperature">—</dd></div><div><dt>Display output</dt><dd id="effective-brightness">—</dd></div></dl>
     </section>
     {% endif %}
   </main>

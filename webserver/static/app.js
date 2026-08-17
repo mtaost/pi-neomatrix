@@ -37,7 +37,15 @@ function renderState(state) {
     $("effective-brightness").textContent = `${Math.round(state.effective_brightness * 100)}%${state.sleeping ? " (sleeping)" : ""}`;
     $("sensor-status").textContent = state.sensor.available ? (state.sensor.error || "Available") : (state.sensor.error || "Unavailable");
     $("sensor-lux").textContent = state.sensor.lux == null ? "No reading" : `${state.sensor.lux.toFixed(1)} lux`;
-    if (!automationFormInitialized) populateAutomationForm(state.automation);
+    const thermal = state.thermal || {};
+    const occupancy = state.occupancy || {};
+    $("thermal-status").textContent = thermal.available ? (thermal.error || "Available") : (thermal.error || "Unavailable");
+    $("occupancy-status").textContent = occupancy.calibrating ? "Calibrating" : occupancy.present ? "Present" : "Empty";
+    $("occupancy-confidence").textContent = occupancy.confidence == null ? "—" : `${Math.round(occupancy.confidence * 100)}%`;
+    const background = occupancy.background_temperature;
+    const maximum = occupancy.maximum_temperature;
+    $("occupancy-temperature").textContent = background == null ? "No reading" : `${background.toFixed(1)} / ${maximum.toFixed(1)} °C`;
+    if (!automationFormInitialized) populateAutomationForm(state.automation, occupancy);
   }
   const card = document.querySelector(".mode-card");
   if (card) card.classList.toggle("active", card.dataset.mode === state.mode);
@@ -54,12 +62,26 @@ function renderState(state) {
 }
 async function refresh() { try { renderState(await api("/api/state")); } catch (error) { setStatus(error.message, true); } }
 
-function populateAutomationForm(automation) {
+function populateAutomationForm(automation, occupancy) {
   $("automation-enabled").checked = automation.enabled;
   setValue("sleep-lux", automation.sleep_lux); setValue("wake-lux", automation.wake_lux); setValue("sleep-dwell", automation.sleep_dwell_seconds);
   setValue("wake-dwell", automation.wake_dwell_seconds); setValue("poll-seconds", automation.poll_seconds); setValue("min-brightness", automation.min_brightness);
   setValue("max-lux", automation.max_lux); setValue("override-policy", automation.manual_override_policy); setValue("override-minutes", automation.manual_override_minutes);
+  if (occupancy) {
+    $("occupancy-enabled").checked = Boolean(occupancy.enabled);
+    setValue("occupancy-delta", occupancy.temperature_delta_f); setValue("occupancy-region", occupancy.minimum_region_size);
+    setValue("occupancy-absence-dwell", occupancy.absence_dwell_seconds); setValue("occupancy-presence-dwell", occupancy.presence_dwell_seconds);
+    setValue("occupancy-calibration", occupancy.startup_calibration_seconds); setValue("occupancy-edge", occupancy.edge_exclusion);
+  }
+  syncAutomationSettingsVisibility();
   automationFormInitialized = true;
+}
+
+function syncAutomationSettingsVisibility() {
+  const ambientSettings = $("ambient-settings");
+  const occupancySettings = $("occupancy-settings");
+  if (ambientSettings) ambientSettings.hidden = !$("automation-enabled").checked;
+  if (occupancySettings) occupancySettings.hidden = !$("occupancy-enabled").checked;
 }
 
 function sliderDecimalPlaces(step) {
@@ -331,11 +353,21 @@ async function initDisplayPage() {
 }
 
 function initAutomationPage() {
+  $("automation-enabled").addEventListener("change", syncAutomationSettingsVisibility);
+  $("occupancy-enabled").addEventListener("change", syncAutomationSettingsVisibility);
   $("save-automation").onclick = async () => {
     try {
       const automation = {enabled: $("automation-enabled").checked, sleep_lux: number("sleep-lux"), wake_lux: number("wake-lux"), sleep_dwell_seconds: number("sleep-dwell"), wake_dwell_seconds: number("wake-dwell"), poll_seconds: number("poll-seconds"), min_brightness: number("min-brightness"), max_lux: number("max-lux"), manual_override_policy: $("override-policy").value, manual_override_minutes: number("override-minutes")};
       const state = await api("/api/settings", {method: "PATCH", body: JSON.stringify({automation})});
       populateAutomationForm(state.automation);
+      renderState(state);
+    } catch (error) { setStatus(error.message, true); }
+  };
+  $("save-occupancy").onclick = async () => {
+    try {
+      const occupancy = {enabled: $("occupancy-enabled").checked, temperature_delta_f: number("occupancy-delta"), minimum_region_size: number("occupancy-region"), absence_dwell_seconds: number("occupancy-absence-dwell"), presence_dwell_seconds: number("occupancy-presence-dwell"), startup_calibration_seconds: number("occupancy-calibration"), edge_exclusion: number("occupancy-edge")};
+      const state = await api("/api/settings", {method: "PATCH", body: JSON.stringify({occupancy})});
+      populateAutomationForm(state.automation, state.occupancy);
       renderState(state);
     } catch (error) { setStatus(error.message, true); }
   };

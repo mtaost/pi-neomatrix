@@ -175,6 +175,31 @@ sudo journalctl -u pi-neomatrix -n 100 --no-pager
 
 Connect the BH1750 over I²C. The service continues to run when the sensor is unavailable, and automation is disabled by default. From the UI settings page you can enable it and set sleep/wake lux thresholds, dwell times, brightness mapping, polling interval, and the manual override policy. By default it sleeps below 5 lux for 60 seconds, wakes above 10 lux for 15 seconds, and treats a manual change as a 30-minute override.
 
+### Thermal Occupancy Standby
+
+The MLX90640 is acquired by one shared background service. The Thermal Camera
+mode and occupancy detector consume its latest in-memory frame, so occupancy
+continues to work while any display mode is selected and mode switching does
+not open a second MLX90640 connection. The service starts at 4 Hz and uses an
+800 kHz I²C bus; lower the refresh rate in the Thermal Camera settings if the
+Pi reports frame retries.
+
+Occupancy standby is disabled by default. Enable it on the Automation page and
+begin with the defaults: a warm connected region at least 12 pixels large,
+more than 4 °F above the robust background estimate, 3 seconds to wake, and
+60 seconds to pause. The first 10 seconds are used for calibration. The
+display remains logically powered while occupancy standby is active; its
+current mode is paused and the compositor produces black output. A manual
+interaction temporarily follows the configured manual-override policy.
+When occupancy standby is enabled, the BH1750 sleep threshold is ignored so a
+person can still use the display in a dark room; lux-based brightness dimming
+continues to apply.
+
+If warm objects cause false wakes, increase the warmth or minimum-region
+controls. If a person is missed, reduce the warmth or region threshold and
+verify that the camera is aimed at the occupied area. Thermal frames are kept
+in memory only and are not exposed as raw images through the API.
+
 ### Setting up the I2S Microphone
 For the audio spectrum analyzer mode, configure your I2S MEMS microphone:
 - https://learn.adafruit.com/adafruit-i2s-mems-microphone-breakout/raspberry-pi-wiring-test
