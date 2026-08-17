@@ -4,6 +4,14 @@ import re
 HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
+SPECTRUM_SETTINGS = {
+    "gain_db": {"type": "range", "label": "Input gain", "help": "Boost or reduce microphone sensitivity before the spectrum is calculated.", "min": -12, "max": 48, "step": 1, "default": 0, "unit": "dB"},
+    "peak_markers": {"type": "boolean", "label": "Show peak markers", "help": "Hold the recent high point briefly, then let a white cap fall back toward the live bar.", "default": False},
+    "palette": {"type": "select", "label": "Color palette", "help": "Choose the color treatment for spectrum bars.", "default": "classic", "choices": [{"value": "classic", "label": "Classic green / yellow / red"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "ocean", "label": "Ocean gradient"}, {"value": "sunset", "label": "Sunset gradient"}, {"value": "fixed", "label": "Fixed color"}]},
+    "fixed_color": {"type": "color", "label": "Fixed spectrum color", "help": "Used when Color palette is set to Fixed color.", "default": "#00FF66"},
+}
+
+
 GAME_OF_LIFE_SETTINGS = {
     "iteration_delay": {"type": "range", "label": "Iteration speed", "help": "Higher values run faster.", "min": 0.02, "max": 1.0, "step": 0.01, "default": 0.05, "unit": "seconds", "inverse": True},
     "alive_color_mode": {"type": "select", "label": "Alive pixels", "help": "Choose a single shifting hue, a moving rainbow across living cells, or a fixed color.", "default": "rainbow_cycle", "choices": [{"value": "rainbow_cycle", "label": "Rainbow cycle"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "fixed", "label": "Fixed color"}]},

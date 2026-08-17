@@ -39,6 +39,24 @@ class AudioHelpersTests(unittest.TestCase):
 
 
 class SpectrumBinningTests(unittest.TestCase):
+    def test_logarithmic_bands_stop_at_twelve_kilohertz(self):
+        analyzer = SpectrumAnalyzer(FakeDriver())
+        self.assertAlmostEqual(analyzer.bin_edges[-1], 12_000)
+
+    def test_lowest_band_has_its_own_resolved_fft_sample(self):
+        analyzer = SpectrumAnalyzer(FakeDriver())
+        frequency = analyzer.SAMPLE_RATE / analyzer.CHUNK_SIZE * 3
+        time = np.arange(analyzer.CHUNK_SIZE) / analyzer.SAMPLE_RATE
+        samples = (0.4 * np.sin(2 * np.pi * frequency * time)).astype(np.float32)
+        self.assertGreater(analyzer._calculate_levels(samples)[0], 0)
+
+    def test_overlapping_fft_advances_on_a_half_window_hop(self):
+        analyzer = SpectrumAnalyzer(FakeDriver())
+        hop = np.full(analyzer.HOP_SIZE, 0.25, dtype=np.float32)
+        window = analyzer._append_samples(hop)
+        self.assertTrue(np.all(window[:analyzer.HOP_SIZE] == 0))
+        self.assertTrue(np.all(window[analyzer.HOP_SIZE:] == 0.25))
+
     def test_logarithmic_bands_produce_a_visible_tone_column(self):
         analyzer = SpectrumAnalyzer(FakeDriver())
         time = np.arange(analyzer.CHUNK_SIZE) / analyzer.SAMPLE_RATE
@@ -51,6 +69,29 @@ class SpectrumBinningTests(unittest.TestCase):
         )
         self.assertGreater(levels[tone_band], 0)
         self.assertLessEqual(max(levels), analyzer.height)
+
+    def test_live_settings_change_gain_and_palette(self):
+        analyzer = SpectrumAnalyzer(FakeDriver(), {"gain_db": 18, "palette": "fixed", "fixed_color": "#123456"})
+        self.assertEqual(analyzer.settings["gain_db"], 18.0)
+        self.assertEqual(analyzer._bar_color(4, 8, 16), (18, 52, 86))
+
+        analyzer.update_settings({"palette": "ocean"})
+        self.assertNotEqual(analyzer._bar_color(4, 0, 16), analyzer._bar_color(4, 15, 16))
+
+    def test_peak_markers_hold_then_fall_with_gravity(self):
+        analyzer = SpectrumAnalyzer(FakeDriver(), {"peak_markers": True})
+        loud = np.array([8] + [0] * 15)
+        quiet = np.zeros(16, dtype=int)
+        analyzer._update_peak_markers(loud, now=0.0)
+        analyzer._update_peak_markers(quiet, now=0.2)
+        self.assertEqual(analyzer.peak_levels[0], 8)
+
+        analyzer._update_peak_markers(quiet, now=0.7)
+        self.assertLess(analyzer.peak_levels[0], 8)
+        self.assertGreater(analyzer.peak_levels[0], 0)
+
+        analyzer.update_settings({"peak_markers": False})
+        self.assertTrue(np.all(analyzer.peak_levels == 0))
 
 
 if __name__ == "__main__":

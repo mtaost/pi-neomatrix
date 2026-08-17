@@ -1,4 +1,4 @@
-from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS, TETRIS_SETTINGS
+from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS, SPECTRUM_SETTINGS, TETRIS_SETTINGS
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -29,7 +29,7 @@ def build_mode_registry():
 
     def spectrum(driver, options):
         from display_modes.spectrumanalyzer import SpectrumAnalyzer
-        return SpectrumAnalyzer(driver)
+        return SpectrumAnalyzer(driver, options)
 
     def image(driver, options):
         from display_modes.imageviewer import ImageViewer
@@ -61,7 +61,7 @@ def build_mode_registry():
 
     specs = [
         ModeSpec("life", "Game of Life", life, settings_schema=GAME_OF_LIFE_SETTINGS),
-        ModeSpec("spectrum", "Spectrum Analyzer", spectrum, ("microphone",)),
+        ModeSpec("spectrum", "Spectrum Analyzer", spectrum, ("microphone",), SPECTRUM_SETTINGS),
         ModeSpec("image", "Image Viewer", image, requires_asset=True),
         ModeSpec("thermal", "Thermal Camera", thermal, ("mlx90640",)),
         ModeSpec("rain", "Pixel Rain", rain, settings_schema=PIXEL_RAIN_SETTINGS),

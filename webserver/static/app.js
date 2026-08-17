@@ -199,6 +199,7 @@ function createModeCard(mode) {
     life: {modeKey: "alive_color_mode", relevantModes: {alive_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
     rain: {modeKey: "rain_color_mode", relevantModes: {rain_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
     stars: {modeKey: "star_color_mode", relevantModes: {star_fixed_color: "fixed", rainbow_cycle_speed: "rainbow_cycle", rainbow_gradient_speed: "rainbow_gradient"}},
+    spectrum: {modeKey: "palette", relevantModes: {fixed_color: "fixed"}},
   };
   const colorControls = colorModeControls[mode.id];
   if (colorControls) {
