@@ -117,6 +117,7 @@ Available mode IDs are:
 - `stars`: Pixel Stars
 - `tetris`: Tetris AI
 - `perlin`: Perlin Noise gradient
+- `fireplace`: Fireplace
 - `off`: Display Off
 
 ### Start at Boot with systemd

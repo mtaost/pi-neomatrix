@@ -60,6 +60,20 @@ FIREWORKS_SETTINGS = {
 }
 
 
+FIREPLACE_SETTINGS = {
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "How often the flame is redrawn.", "min": 0.02, "max": 0.2, "step": 0.01, "default": 0.05, "unit": "seconds", "inverse": True},
+    "flame_height": {"type": "range", "label": "Flame height", "help": "The maximum height reached by the flames.", "min": 0.45, "max": 1.0, "step": 0.01, "default": 0.9},
+    "flame_scale": {"type": "range", "label": "Flame shape scale", "help": "Lower values make broad tongues; higher values create smaller, more active tongues.", "min": 0.05, "max": 0.5, "step": 0.01, "default": 0.18, "unit": "detail"},
+    "flicker": {"type": "range", "label": "Flicker", "help": "How much the flame edge dances and changes shape.", "min": 0.0, "max": 1.0, "step": 0.01, "default": 0.75},
+    "turbulence": {"type": "range", "label": "Turbulence", "help": "Blend in finer noise to create more irregular flame movement.", "min": 0.0, "max": 1.0, "step": 0.01, "default": 0.55},
+    "ember_density": {"type": "range", "label": "Ember density", "help": "How frequently glowing embers rise from the logs.", "min": 0, "max": 100, "step": 1, "default": 18, "unit": "%"},
+    "palette": {"type": "select", "label": "Color palette", "help": "Choose a curated fire treatment or define your own three-color gradient.", "default": "classic", "choices": [{"value": "classic", "label": "Classic fire"}, {"value": "hearth", "label": "Hearth"}, {"value": "candle", "label": "Candlelight"}, {"value": "blue_flame", "label": "Blue flame"}, {"value": "neon", "label": "Neon fire"}, {"value": "custom", "label": "Custom gradient"}]},
+    "custom_shadow_color": {"type": "color", "label": "Custom shadow color", "help": "The darkest color in the custom flame gradient.", "default": "#160000"},
+    "custom_mid_color": {"type": "color", "label": "Custom middle color", "help": "The middle color in the custom flame gradient.", "default": "#FF4200"},
+    "custom_highlight_color": {"type": "color", "label": "Custom highlight color", "help": "The hottest color in the custom flame gradient.", "default": "#FFF2A1"},
+}
+
+
 TETRIS_SETTINGS = {
     "animation_speed": {"type": "range", "label": "Animation speed", "help": "Higher values animate faster.", "min": 0.02, "max": 0.375, "step": 0.01, "default": 0.08, "unit": "seconds", "inverse": True},
     "strategy": {"type": "select", "label": "AI strategy", "help": "Changing strategy starts a fresh game.", "default": "balanced", "choices": [{"value": "balanced", "label": "Balanced"}, {"value": "fast", "label": "Fast"}, {"value": "perfect_clear", "label": "Perfect Clear"}]},

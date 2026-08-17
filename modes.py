@@ -1,4 +1,4 @@
-from mode_settings import FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PERLIN_NOISE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS, SPECTRUM_SETTINGS, TETRIS_SETTINGS
+from mode_settings import FIREPLACE_SETTINGS, FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PERLIN_NOISE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS, SPECTRUM_SETTINGS, TETRIS_SETTINGS
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -59,6 +59,10 @@ def build_mode_registry():
         from display_modes.perlinnoise import PerlinNoise
         return PerlinNoise(driver, options)
 
+    def fireplace(driver, options):
+        from display_modes.fireplace import Fireplace
+        return Fireplace(driver, options)
+
     def off(driver, options):
         from display_modes.displayoff import DisplayOff
         return DisplayOff(driver)
@@ -73,6 +77,7 @@ def build_mode_registry():
         ModeSpec("fireworks", "Fireworks", fireworks, settings_schema=FIREWORKS_SETTINGS),
         ModeSpec("tetris", "Tetris AI", tetris, ("cold_clear",), settings_schema=TETRIS_SETTINGS),
         ModeSpec("perlin", "Perlin Noise", perlin, settings_schema=PERLIN_NOISE_SETTINGS),
+        ModeSpec("fireplace", "Fireplace", fireplace, settings_schema=FIREPLACE_SETTINGS),
         ModeSpec("off", "Display Off", off),
     ]
     return {spec.id: spec for spec in specs}
