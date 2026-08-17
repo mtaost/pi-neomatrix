@@ -20,6 +20,8 @@ class SpeedSliderSettingsTests(unittest.TestCase):
 
     def test_spectrum_exposes_gain_and_palette_controls(self):
         self.assertEqual(SPECTRUM_SETTINGS["gain_db"]["default"], 0)
+        self.assertFalse(SPECTRUM_SETTINGS["auto_gain"]["default"])
+        self.assertFalse(SPECTRUM_SETTINGS["mirror_from_center"]["default"])
         self.assertFalse(SPECTRUM_SETTINGS["peak_markers"]["default"])
         self.assertEqual(
             [choice["value"] for choice in SPECTRUM_SETTINGS["palette"]["choices"]],

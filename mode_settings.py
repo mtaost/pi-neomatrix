@@ -6,9 +6,27 @@ HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 SPECTRUM_SETTINGS = {
     "gain_db": {"type": "range", "label": "Input gain", "help": "Boost or reduce microphone sensitivity before the spectrum is calculated.", "min": -12, "max": 48, "step": 1, "default": 0, "unit": "dB"},
+    "auto_gain": {"type": "boolean", "label": "Automatic gain", "help": "Continuously adjusts microphone sensitivity while preserving the manual gain value for later.", "default": False},
+    "mirror_from_center": {"type": "boolean", "label": "Mirror from center", "help": "Draw each spectrum bar outward from the center line, mirrored above and below.", "default": False},
     "peak_markers": {"type": "boolean", "label": "Show peak markers", "help": "Hold the recent high point briefly, then let a white cap fall back toward the live bar.", "default": False},
     "palette": {"type": "select", "label": "Color palette", "help": "Choose the color treatment for spectrum bars.", "default": "classic", "choices": [{"value": "classic", "label": "Classic green / yellow / red"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "ocean", "label": "Ocean gradient"}, {"value": "sunset", "label": "Sunset gradient"}, {"value": "fixed", "label": "Fixed color"}]},
     "fixed_color": {"type": "color", "label": "Fixed spectrum color", "help": "Used when Color palette is set to Fixed color.", "default": "#00FF66"},
+}
+
+
+THERMAL_SETTINGS = {
+    "refresh_rate": {"type": "select", "label": "Sensor refresh rate", "help": "Use a lower rate if the Pi reports frame retries or the image stays black. 4 Hz is a safe starting point.", "default": "4", "choices": [{"value": "2", "label": "2 Hz (most reliable)"}, {"value": "4", "label": "4 Hz (recommended)"}, {"value": "8", "label": "8 Hz"}, {"value": "16", "label": "16 Hz"}]},
+    "exposure_mode": {"type": "select", "label": "Exposure method", "help": "Choose whether the palette follows the full frame, ignores temperature outliers, or uses a fixed range.", "default": "auto", "choices": [{"value": "auto", "label": "Auto min / max"}, {"value": "percentile", "label": "Percentile clipping"}, {"value": "fixed", "label": "Fixed temperature range"}]},
+    "exposure_smoothing": {"type": "range", "label": "Exposure smoothing", "help": "Keep the color range steadier between frames. Lower values react faster to changes.", "min": 0, "max": 0.95, "step": 0.05, "default": 0.65},
+    "min_temperature": {"type": "range", "label": "Minimum temperature", "help": "Lower end of the color range when Fixed temperature range is selected. Displayed in Fahrenheit.", "min": 5, "max": 35, "step": 0.5, "default": 20, "unit": "°F", "display_scale": 1.8, "display_offset": 32, "display_decimals": 1, "show_value": True},
+    "max_temperature": {"type": "range", "label": "Maximum temperature", "help": "Upper end of the color range when Fixed temperature range is selected. Displayed in Fahrenheit.", "min": 15, "max": 45, "step": 0.5, "default": 30, "unit": "°F", "display_scale": 1.8, "display_offset": 32, "display_decimals": 1, "show_value": True},
+    "low_percentile": {"type": "range", "label": "Low percentile", "help": "Ignore the coldest fraction of pixels when percentile clipping is selected.", "min": 0, "max": 45, "step": 1, "default": 5, "unit": "%"},
+    "high_percentile": {"type": "range", "label": "High percentile", "help": "Ignore the hottest fraction of pixels when percentile clipping is selected.", "min": 55, "max": 100, "step": 1, "default": 95, "unit": "%"},
+    "palette": {"type": "select", "label": "Thermal palette", "help": "Choose how temperature is translated into color.", "default": "ironbow", "choices": [{"value": "ironbow", "label": "Ironbow"}, {"value": "rainbow", "label": "Rainbow"}, {"value": "amber", "label": "Amber"}, {"value": "grayscale", "label": "Grayscale"}, {"value": "cool", "label": "Cool"}, {"value": "custom", "label": "Custom gradient"}]},
+    "custom_cold_color": {"type": "color", "label": "Custom cold color", "help": "The color used at the low end of a custom thermal gradient.", "default": "#000020"},
+    "custom_mid_color": {"type": "color", "label": "Custom middle color", "help": "The middle color in a custom thermal gradient.", "default": "#00A0FF"},
+    "custom_hot_color": {"type": "color", "label": "Custom hot color", "help": "The color used at the high end of a custom thermal gradient.", "default": "#FFFF80"},
+    "autorange": {"type": "boolean", "label": "Legacy automatic range", "help": "Compatibility setting for older saved thermal configurations.", "default": True, "hidden": True},
 }
 
 

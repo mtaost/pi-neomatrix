@@ -26,6 +26,10 @@ class SpectrumAnalyzer(module.Module):
     MAX_FREQUENCY = 12_000
     NOISE_FLOOR_DBFS = -72.0
     FULL_SCALE_DBFS = -24.0
+    AUTO_GAIN_TARGET_DBFS = -30.0
+    AUTO_GAIN_SILENCE_DBFS = -70.0
+    AUTO_GAIN_RISE = 0.08
+    AUTO_GAIN_FALL = 0.35
     DECAY = 0.78
     PEAK_HOLD_SECONDS = 0.35
     PEAK_GRAVITY = 24.0
@@ -52,9 +56,14 @@ class SpectrumAnalyzer(module.Module):
         self.update_settings(options)
 
     def update_settings(self, values=None):
+        was_auto_gain = getattr(self, "settings", {}).get("auto_gain", False)
         had_markers = getattr(self, "settings", {}).get("peak_markers", False)
         self.settings = normalize_settings(SPECTRUM_SETTINGS, values, getattr(self, "settings", None))
         self.fixed_color = hex_to_rgb(self.settings["fixed_color"])
+        if not was_auto_gain and self.settings["auto_gain"]:
+            self.auto_gain_db = self.settings["gain_db"]
+        elif not hasattr(self, "auto_gain_db"):
+            self.auto_gain_db = self.settings["gain_db"]
         if had_markers and not self.settings["peak_markers"]:
             self._reset_peak_markers()
 
@@ -74,8 +83,9 @@ class SpectrumAnalyzer(module.Module):
         """Map one PCM chunk to smoothed LED heights using logarithmic FFT bands."""
         if len(samples) != self.CHUNK_SIZE:
             raise ValueError(f"Expected {self.CHUNK_SIZE} samples, received {len(samples)}")
-        gain = 10 ** (self.settings["gain_db"] / 20.0)
-        centered = (samples - np.mean(samples)) * gain
+        centered = samples - np.mean(samples)
+        gain = 10 ** (self._effective_gain_db(centered) / 20.0)
+        centered *= gain
         spectrum = np.abs(np.fft.rfft(centered * self.window)) * (2.0 / self.window.sum())
         heights = np.zeros(self.width, dtype=float)
         for index, (low, high) in enumerate(zip(self.bin_edges[:-1], self.bin_edges[1:])):
@@ -87,6 +97,22 @@ class SpectrumAnalyzer(module.Module):
         heights = np.clip(heights, 0, self.height)
         self.levels = np.maximum(heights, self.levels * self.DECAY)
         return self.levels.astype(int)
+
+    def _effective_gain_db(self, centered_samples):
+        if not self.settings["auto_gain"]:
+            return self.settings["gain_db"]
+        rms = float(np.sqrt(np.mean(np.square(centered_samples, dtype=np.float64))))
+        input_dbfs = 20 * np.log10(max(rms, 1e-12))
+        if input_dbfs <= self.AUTO_GAIN_SILENCE_DBFS:
+            return self.auto_gain_db
+        desired_gain = np.clip(
+            self.AUTO_GAIN_TARGET_DBFS - input_dbfs,
+            SPECTRUM_SETTINGS["gain_db"]["min"],
+            SPECTRUM_SETTINGS["gain_db"]["max"],
+        )
+        responsiveness = self.AUTO_GAIN_FALL if desired_gain < self.auto_gain_db else self.AUTO_GAIN_RISE
+        self.auto_gain_db += (desired_gain - self.auto_gain_db) * responsiveness
+        return self.auto_gain_db
 
     def _append_samples(self, samples):
         """Advance the overlapping FFT window by one captured hop."""
@@ -137,8 +163,29 @@ class SpectrumAnalyzer(module.Module):
         for x, peak in enumerate(self.peak_levels):
             if peak <= levels[x]:
                 continue
+            if self.settings["mirror_from_center"]:
+                peak_offset = min(self.height // 2 - 1, int(np.ceil(peak / 2)))
+                bar_offset = int(np.ceil(levels[x] / 2))
+                if peak_offset <= bar_offset:
+                    continue
+                self.pixels[x, self.height // 2 + peak_offset] = self.PEAK_COLOR
+                self.pixels[x, self.height // 2 - 1 - peak_offset] = self.PEAK_COLOR
+                continue
             row = self.height - 1 - min(self.height - 1, int(np.ceil(peak)))
             self.pixels[x, row] = self.PEAK_COLOR
+
+    def _draw_bars(self, levels):
+        if self.settings["mirror_from_center"]:
+            half_height = self.height // 2
+            for x, height in enumerate(levels):
+                for offset in range(int(np.ceil(height / 2))):
+                    color = self._bar_color(x, offset * 2, height)
+                    self.pixels[x, half_height + offset] = color
+                    self.pixels[x, half_height - 1 - offset] = color
+            return
+        for x, height in enumerate(levels):
+            for y in range(height):
+                self.pixels[x, self.height - 1 - y] = self._bar_color(x, y, height)
 
     def _open_capture(self):
         capture = self.capture_factory(sample_rate=self.SAMPLE_RATE, channels=2, period_frames=self.HOP_SIZE)
@@ -164,9 +211,7 @@ class SpectrumAnalyzer(module.Module):
                 start = time.monotonic()
                 levels = self._calculate_levels(self._append_samples(self.capture.read(self.HOP_SIZE)))
                 self.driver.clear(self.image)
-                for x, height in enumerate(levels):
-                    for y in range(height):
-                        self.pixels[x, self.height - 1 - y] = self._bar_color(x, y, height)
+                self._draw_bars(levels)
                 if self.settings["peak_markers"]:
                     self._update_peak_markers(levels, time.monotonic())
                     self._draw_peak_markers(levels)

@@ -72,11 +72,48 @@ function invertedSliderValue(input, value) {
   return inverted.toFixed(sliderDecimalPlaces(input.step));
 }
 
+function modeSettingValue(input) {
+  let value = Number(input.dataset.inverse === "true" ? invertedSliderValue(input, input.value) : input.value);
+  if (input.dataset.displayScale) {
+    value = value * Number(input.dataset.displayScale) + Number(input.dataset.displayOffset || 0);
+    const decimals = Number(input.dataset.displayDecimals || 0);
+    value = decimals ? value.toFixed(decimals) : Math.round(value);
+  } else if (Number.isNaN(value)) {
+    value = input.value;
+  }
+  return input.dataset.unit ? `${value} ${input.dataset.unit}` : value;
+}
+
+function updateModeSettingOutput(input) {
+  const output = input.closest("label")?.querySelector(".setting-value");
+  if (output) output.textContent = modeSettingValue(input);
+}
+
 function createModeSetting(field, value) {
   const label = document.createElement("label");
-  label.textContent = field.label;
+  const isBoolean = field.type === "boolean";
+  if (field.show_value) {
+    const title = document.createElement("span");
+    title.textContent = field.label;
+    const output = document.createElement("output");
+    output.className = "setting-value";
+    title.append(output);
+    label.append(title);
+  } else if (isBoolean) {
+    label.className = "setting-toggle";
+    const title = document.createElement("span");
+    title.className = "setting-label";
+    title.textContent = field.label;
+    label.append(title);
+  } else {
+    label.textContent = field.label;
+  }
   const input = document.createElement(field.type === "select" ? "select" : "input");
   input.dataset.modeSetting = field.key;
+  input.dataset.unit = field.unit || "";
+  if (field.display_scale !== undefined) input.dataset.displayScale = field.display_scale;
+  if (field.display_offset !== undefined) input.dataset.displayOffset = field.display_offset;
+  if (field.display_decimals !== undefined) input.dataset.displayDecimals = field.display_decimals;
   if (field.type === "select") {
     for (const choice of field.choices) {
       const option = document.createElement("option");
@@ -92,9 +129,13 @@ function createModeSetting(field, value) {
     if (field.inverse) input.dataset.inverse = "true";
   }
   input.value = field.inverse ? invertedSliderValue(input, value) : value;
-  if (field.type === "boolean") input.checked = Boolean(value);
+  if (isBoolean) {
+    input.checked = Boolean(value);
+    input.classList.add("pill-switch");
+  }
 
   label.append(input);
+  updateModeSettingOutput(input);
   if (field.help) {
     const help = document.createElement("span");
     help.className = "help";
@@ -111,7 +152,7 @@ function syncColorModeControls(settingInputs, modeKey, relevantModes) {
     const input = settingInputs[key];
     if (!input) continue;
     const label = input.closest("label");
-    const isRelevant = colorMode.value === requiredMode;
+    const isRelevant = Array.isArray(requiredMode) ? requiredMode.includes(colorMode.value) : colorMode.value === requiredMode;
     label.style.display = isRelevant ? "" : "none";
     label.setAttribute("aria-hidden", String(!isRelevant));
   }
@@ -141,10 +182,14 @@ function bindLiveModeSettings(mode, settingInputs) {
   };
   for (const input of Object.values(settingInputs)) {
     input.addEventListener("input", () => {
+      updateModeSettingOutput(input);
       clearTimeout(modeSettingsTimer);
       modeSettingsTimer = setTimeout(applyNow, 125);
     });
-    input.addEventListener("change", applyNow);
+    input.addEventListener("change", () => {
+      updateModeSettingOutput(input);
+      applyNow();
+    });
   }
 }
 
@@ -188,11 +233,36 @@ function createModeCard(mode) {
     settings.append(label);
   }
   for (const [key, definition] of Object.entries(mode.settings_schema)) {
+    if (definition.hidden) continue;
     const field = {...definition, key};
     const value = latestState?.mode === mode.id ? (latestState.mode_options?.[key] ?? field.default) : field.default;
     const control = createModeSetting(field, value);
     settingInputs[key] = control.input;
+    if (mode.id === "spectrum" && key === "auto_gain") continue;
     settings.append(control.element);
+  }
+  if (mode.id === "spectrum" && settingInputs.auto_gain) {
+    const gainLabel = settingInputs.gain_db.closest("label");
+    const autoInput = settingInputs.auto_gain;
+    const gainText = [...gainLabel.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+    const gainTitle = document.createElement("span");
+    gainTitle.textContent = gainText.textContent;
+    Object.assign(gainTitle.style, {display: "flex", alignItems: "center", gap: "10px"});
+    gainLabel.replaceChild(gainTitle, gainText);
+    const autoToggle = document.createElement("span");
+    autoToggle.textContent = "Automatic";
+    Object.assign(autoToggle.style, {display: "flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap", fontSize: "0.9em"});
+    autoInput.setAttribute("aria-label", "Automatic gain");
+    autoInput.title = mode.settings_schema.auto_gain.help;
+    autoToggle.prepend(autoInput);
+    gainTitle.append(autoToggle);
+    const syncAutoGain = () => {
+      settingInputs.gain_db.disabled = autoInput.checked;
+      settingInputs.gain_db.closest("label").classList.toggle("is-disabled", autoInput.checked);
+      settingInputs.gain_db.closest("label").style.opacity = autoInput.checked ? "0.5" : "";
+    };
+    syncAutoGain();
+    autoInput.addEventListener("change", syncAutoGain);
   }
 
   const colorModeControls = {
@@ -202,11 +272,18 @@ function createModeCard(mode) {
     spectrum: {modeKey: "palette", relevantModes: {fixed_color: "fixed"}},
     perlin: {modeKey: "palette", relevantModes: {custom_start_color: "custom", custom_mid_color: "custom", custom_end_color: "custom"}},
     fireplace: {modeKey: "palette", relevantModes: {custom_shadow_color: "custom", custom_mid_color: "custom", custom_highlight_color: "custom"}},
+    thermal: {modeKey: "palette", relevantModes: {custom_cold_color: "custom", custom_mid_color: "custom", custom_hot_color: "custom"}},
   };
   const colorControls = colorModeControls[mode.id];
   if (colorControls) {
     syncColorModeControls(settingInputs, colorControls.modeKey, colorControls.relevantModes);
     settingInputs[colorControls.modeKey].addEventListener("change", () => syncColorModeControls(settingInputs, colorControls.modeKey, colorControls.relevantModes));
+  }
+  if (mode.id === "thermal") {
+    const exposureMode = settingInputs.exposure_mode;
+    const exposureFields = {exposure_smoothing: ["auto", "percentile"], min_temperature: "fixed", max_temperature: "fixed", low_percentile: "percentile", high_percentile: "percentile"};
+    syncColorModeControls(settingInputs, "exposure_mode", exposureFields);
+    exposureMode.addEventListener("change", () => syncColorModeControls(settingInputs, "exposure_mode", exposureFields));
   }
 
   bindLiveModeSettings(mode, settingInputs);

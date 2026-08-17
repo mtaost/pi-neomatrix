@@ -1,4 +1,4 @@
-from mode_settings import FIREPLACE_SETTINGS, FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PERLIN_NOISE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS, SPECTRUM_SETTINGS, TETRIS_SETTINGS
+from mode_settings import FIREPLACE_SETTINGS, FIREWORKS_SETTINGS, GAME_OF_LIFE_SETTINGS, PERLIN_NOISE_SETTINGS, PIXEL_RAIN_SETTINGS, PIXEL_STARS_SETTINGS, SPECTRUM_SETTINGS, TETRIS_SETTINGS, THERMAL_SETTINGS
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -37,7 +37,7 @@ def build_mode_registry():
 
     def thermal(driver, options):
         from display_modes.thermalcamera import ThermalCamera
-        return ThermalCamera(driver)
+        return ThermalCamera(driver, options)
 
     def rain(driver, options):
         from display_modes.pixelrain import PixelRain
@@ -71,7 +71,7 @@ def build_mode_registry():
         ModeSpec("life", "Game of Life", life, settings_schema=GAME_OF_LIFE_SETTINGS),
         ModeSpec("spectrum", "Spectrum Analyzer", spectrum, ("microphone",), SPECTRUM_SETTINGS),
         ModeSpec("image", "Image Viewer", image, requires_asset=True),
-        ModeSpec("thermal", "Thermal Camera", thermal, ("mlx90640",)),
+        ModeSpec("thermal", "Thermal Camera", thermal, ("mlx90640",), THERMAL_SETTINGS),
         ModeSpec("rain", "Pixel Rain", rain, settings_schema=PIXEL_RAIN_SETTINGS),
         ModeSpec("stars", "Pixel Stars", stars, settings_schema=PIXEL_STARS_SETTINGS),
         ModeSpec("fireworks", "Fireworks", fireworks, settings_schema=FIREWORKS_SETTINGS),

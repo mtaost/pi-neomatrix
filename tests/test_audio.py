@@ -78,6 +78,19 @@ class SpectrumBinningTests(unittest.TestCase):
         analyzer.update_settings({"palette": "ocean"})
         self.assertNotEqual(analyzer._bar_color(4, 0, 16), analyzer._bar_color(4, 15, 16))
 
+    def test_automatic_gain_tracks_signal_without_amplifying_silence(self):
+        analyzer = SpectrumAnalyzer(FakeDriver(), {"auto_gain": True})
+        quiet_signal = np.full(analyzer.CHUNK_SIZE, 0.01, dtype=np.float32)
+        quiet_signal[::2] *= -1
+        self.assertGreater(analyzer._effective_gain_db(quiet_signal), 0)
+
+        analyzer.auto_gain_db = 8
+        self.assertEqual(analyzer._effective_gain_db(np.zeros(analyzer.CHUNK_SIZE)), 8)
+
+        loud_signal = np.full(analyzer.CHUNK_SIZE, 0.8, dtype=np.float32)
+        loud_signal[::2] *= -1
+        self.assertLess(analyzer._effective_gain_db(loud_signal), 8)
+
     def test_peak_markers_hold_then_fall_with_gravity(self):
         analyzer = SpectrumAnalyzer(FakeDriver(), {"peak_markers": True})
         loud = np.array([8] + [0] * 15)
@@ -92,6 +105,14 @@ class SpectrumBinningTests(unittest.TestCase):
 
         analyzer.update_settings({"peak_markers": False})
         self.assertTrue(np.all(analyzer.peak_levels == 0))
+
+    def test_center_mirror_draws_symmetric_bars(self):
+        analyzer = SpectrumAnalyzer(FakeDriver(), {"mirror_from_center": True, "palette": "fixed", "fixed_color": "#123456"})
+        analyzer._draw_bars(np.array([8] + [0] * 15))
+        for y in (4, 5, 6, 7, 8, 9, 10, 11):
+            self.assertEqual(analyzer.pixels[0, y], (18, 52, 86))
+        self.assertEqual(analyzer.pixels[0, 3], (0, 0, 0))
+        self.assertEqual(analyzer.pixels[0, 12], (0, 0, 0))
 
 
 if __name__ == "__main__":

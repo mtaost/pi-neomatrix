@@ -112,7 +112,7 @@ Available mode IDs are:
 - `life`: Game of Life
 - `spectrum`: Spectrum Analyzer (requires connected microphone)
 - `image`: Image Viewer (requires selected asset)
-- `thermal`: Thermal Camera
+- `thermal`: Thermal Camera (MLX90640; 4 Hz refresh is the recommended starting point)
 - `rain`: Pixel Rain
 - `stars`: Pixel Stars
 - `tetris`: Tetris AI
