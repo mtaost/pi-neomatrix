@@ -6,8 +6,11 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/pi/pi-neomatrix
-ExecStart=/usr/bin/python3 /home/pi/pi-neomatrix/main.py
+WorkingDirectory=/home/rpi/pi-neomatrix
+ExecStart=/usr/bin/python3 /home/rpi/pi-neomatrix/main.py
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
 Restart=on-failure
 RestartSec=3
 TimeoutStopSec=10

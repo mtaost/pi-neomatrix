@@ -69,6 +69,20 @@ TETRIS_SETTINGS = {
     "garbage_messiness": {"type": "range", "label": "Garbage messiness", "help": "Chance that the hole moves to a new column on the next garbage row.", "min": 0, "max": 100, "step": 1, "default": 30, "unit": "%"},
 }
 
+
+PERLIN_NOISE_SETTINGS = {
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Higher values update the gradient more often.", "min": 0.02, "max": 0.2, "step": 0.01, "default": 0.05, "unit": "seconds", "inverse": True},
+    "speed": {"type": "range", "label": "Noise movement", "help": "How quickly the noise field drifts across the display.", "min": 0.0, "max": 1.0, "step": 0.01, "default": 0.15, "unit": "cells/sec"},
+    "scale": {"type": "range", "label": "Noise scale", "help": "Lower values make broader, slower-changing shapes; higher values add finer detail.", "min": 0.05, "max": 0.5, "step": 0.01, "default": 0.16, "unit": "detail"},
+    "octaves": {"type": "range", "label": "Noise layers", "help": "Number of detail layers blended into the gradient.", "min": 1, "max": 5, "step": 1, "default": 3, "unit": "layers"},
+    "persistence": {"type": "range", "label": "Detail persistence", "help": "How strongly each finer noise layer contributes to the result.", "min": 0.25, "max": 0.85, "step": 0.01, "default": 0.5},
+    "contrast": {"type": "range", "label": "Gradient contrast", "help": "Stretch or soften the transition between palette colors.", "min": 0.5, "max": 2.0, "step": 0.05, "default": 1.0},
+    "palette": {"type": "select", "label": "Color palette", "help": "Choose a curated color treatment or define your own three-color gradient.", "default": "aurora", "choices": [{"value": "aurora", "label": "Aurora"}, {"value": "ocean", "label": "Ocean"}, {"value": "sunset", "label": "Sunset"}, {"value": "ember", "label": "Ember"}, {"value": "neon", "label": "Neon"}, {"value": "custom", "label": "Custom gradient"}]},
+    "custom_start_color": {"type": "color", "label": "Custom shadow color", "help": "The darkest color in the custom gradient.", "default": "#05001A"},
+    "custom_mid_color": {"type": "color", "label": "Custom middle color", "help": "The middle color in the custom gradient.", "default": "#005B7F"},
+    "custom_end_color": {"type": "color", "label": "Custom highlight color", "help": "The brightest color in the custom gradient.", "default": "#B7FF5A"},
+}
+
 def default_settings(schema):
     return {key: field["default"] for key, field in schema.items()}
 

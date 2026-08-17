@@ -116,6 +116,7 @@ Available mode IDs are:
 - `rain`: Pixel Rain
 - `stars`: Pixel Stars
 - `tetris`: Tetris AI
+- `perlin`: Perlin Noise gradient
 - `off`: Display Off
 
 ### Start at Boot with systemd
@@ -130,6 +131,44 @@ sudo systemctl status pi-neomatrix
 ```
 
 The service runs as `root` because the current NeoPixel driver requires hardware privileges. It handles `SIGINT` and `SIGTERM` by blanking the panel and releasing the NeoPixel GPIO resource before exit. Standard Python logs are written to stderr and captured by systemd; use `sudo journalctl -u pi-neomatrix -f` to follow them. Set `NEOMATRIX_LOG_LEVEL=DEBUG` when temporarily investigating a mode, then return to the default `INFO` level. Use `sudo systemctl restart pi-neomatrix` after deploying code changes. Hard power loss, kernel failure, and `SIGKILL` cannot run application cleanup; the unit restarts the service after failures.
+
+#### Managing the service
+
+For the normal edit-test loop, change the code and restart the service:
+
+```bash
+sudo systemctl restart pi-neomatrix
+sudo systemctl status pi-neomatrix
+sudo journalctl -fu pi-neomatrix
+```
+
+`restart` sends `SIGTERM`, allowing the application to blank the panel and
+release GPIO before systemd starts the updated code. Configuration in
+`neomatrix-config.json` is preserved across restarts. A browser refresh may be
+enough for a static UI-only change, but restarting is the reliable default.
+
+After changing `/etc/systemd/system/pi-neomatrix.service`, reload systemd's
+unit definitions before restarting the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart pi-neomatrix
+```
+
+Useful operational commands:
+
+```bash
+# Start or stop the display service gracefully.
+sudo systemctl start pi-neomatrix
+sudo systemctl stop pi-neomatrix
+
+# Enable or disable automatic startup at boot.
+sudo systemctl enable pi-neomatrix
+sudo systemctl disable pi-neomatrix
+
+# View recent logs, including startup failures and Python tracebacks.
+sudo journalctl -u pi-neomatrix -n 100 --no-pager
+```
 
 ### Ambient Light Automation
 
