@@ -78,14 +78,18 @@ class SpectrumBinningTests(unittest.TestCase):
         analyzer.update_settings({"palette": "ocean"})
         self.assertNotEqual(analyzer._bar_color(4, 0, 16), analyzer._bar_color(4, 15, 16))
 
-    def test_automatic_gain_tracks_signal_without_amplifying_silence(self):
+    def test_automatic_gain_tracks_signal_and_returns_after_silence(self):
         analyzer = SpectrumAnalyzer(FakeDriver(), {"auto_gain": True})
         quiet_signal = np.full(analyzer.CHUNK_SIZE, 0.01, dtype=np.float32)
         quiet_signal[::2] *= -1
         self.assertGreater(analyzer._effective_gain_db(quiet_signal), 0)
 
         analyzer.auto_gain_db = 8
-        self.assertEqual(analyzer._effective_gain_db(np.zeros(analyzer.CHUNK_SIZE)), 8)
+        self.assertLess(analyzer._effective_gain_db(np.zeros(analyzer.CHUNK_SIZE)), 8)
+
+        for _ in range(200):
+            analyzer._effective_gain_db(np.zeros(analyzer.CHUNK_SIZE))
+        self.assertAlmostEqual(analyzer.auto_gain_db, 0, places=1)
 
         loud_signal = np.full(analyzer.CHUNK_SIZE, 0.8, dtype=np.float32)
         loud_signal[::2] *= -1

@@ -27,9 +27,15 @@ class SpectrumAnalyzer(module.Module):
     NOISE_FLOOR_DBFS = -72.0
     FULL_SCALE_DBFS = -24.0
     AUTO_GAIN_TARGET_DBFS = -30.0
-    AUTO_GAIN_SILENCE_DBFS = -70.0
+    # Require a signal meaningfully above the measured room floor before
+    # tracking it, then keep tracking until it has fallen below this lower
+    # threshold. The gap prevents background noise from repeatedly toggling
+    # automatic gain on and off.
+    AUTO_GAIN_START_DBFS = -62.0
+    AUTO_GAIN_SILENCE_DBFS = -66.0
     AUTO_GAIN_RISE = 0.08
     AUTO_GAIN_FALL = 0.35
+    AUTO_GAIN_IDLE_RETURN = 0.025
     DECAY = 0.78
     PEAK_HOLD_SECONDS = 0.35
     PEAK_GRAVITY = 24.0
@@ -62,8 +68,10 @@ class SpectrumAnalyzer(module.Module):
         self.fixed_color = hex_to_rgb(self.settings["fixed_color"])
         if not was_auto_gain and self.settings["auto_gain"]:
             self.auto_gain_db = self.settings["gain_db"]
+            self.auto_gain_tracking = False
         elif not hasattr(self, "auto_gain_db"):
             self.auto_gain_db = self.settings["gain_db"]
+            self.auto_gain_tracking = False
         if had_markers and not self.settings["peak_markers"]:
             self._reset_peak_markers()
 
@@ -103,7 +111,16 @@ class SpectrumAnalyzer(module.Module):
             return self.settings["gain_db"]
         rms = float(np.sqrt(np.mean(np.square(centered_samples, dtype=np.float64))))
         input_dbfs = 20 * np.log10(max(rms, 1e-12))
+        if input_dbfs >= self.AUTO_GAIN_START_DBFS:
+            self.auto_gain_tracking = True
         if input_dbfs <= self.AUTO_GAIN_SILENCE_DBFS:
+            self.auto_gain_tracking = False
+        if not self.auto_gain_tracking:
+            # Do not preserve a gain that was raised for an earlier sound.
+            # Return gradually so the visualizer remains calm between tracks.
+            self.auto_gain_db += (
+                self.settings["gain_db"] - self.auto_gain_db
+            ) * self.AUTO_GAIN_IDLE_RETURN
             return self.auto_gain_db
         desired_gain = np.clip(
             self.AUTO_GAIN_TARGET_DBFS - input_dbfs,
