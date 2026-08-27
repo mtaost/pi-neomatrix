@@ -41,13 +41,21 @@ GAME_OF_LIFE_SETTINGS = {
 
 
 PIXEL_RAIN_SETTINGS = {
-    "frame_delay": {"type": "range", "label": "Animation speed", "help": "Higher values run faster.", "min": 0.01, "max": 0.2, "step": 0.01, "default": 0.04, "unit": "seconds", "inverse": True},
-    "density": {"type": "range", "label": "Rain density", "help": "The chance of a new drop appearing in each column.", "min": 1, "max": 1000, "step": 1, "default": 30, "unit": "per 1,000"},
-    "persistence": {"type": "range", "label": "Trail persistence", "help": "Higher values keep each raindrop trail visible for longer.", "min": 0.1, "max": 0.99, "step": 0.01, "default": 0.75},
-    "rain_color_mode": {"type": "select", "label": "Raindrop colors", "help": "Choose a single shifting hue, a rainbow across columns, or a fixed color.", "default": "rainbow_cycle", "choices": [{"value": "rainbow_cycle", "label": "Rainbow cycle"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "fixed", "label": "Fixed color"}]},
-    "rain_fixed_color": {"type": "color", "label": "Fixed raindrop color", "help": "Used when Raindrop colors is set to Fixed color.", "default": "#00BFFF"},
-    "rainbow_cycle_speed": {"type": "range", "label": "Rainbow cycle speed", "help": "Hue cycles per second for the single-color rainbow effect.", "min": 0.0, "max": 2.0, "step": 0.01, "default": 0.25, "unit": "cycles/sec"},
-    "rainbow_gradient_speed": {"type": "range", "label": "Rainbow gradient speed", "help": "Hue cycles per second for the rainbow gradient effect.", "min": 0.0, "max": 2.0, "step": 0.01, "default": 0.15, "unit": "cycles/sec"},
+    "palette": {"type": "select", "label": "Color palette", "help": "Choose the color treatment used by the falling drops.", "default": "ocean", "aliases": {"classic": "ocean"}, "choices": [{"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "ocean", "label": "Ocean gradient"}, {"value": "sunset", "label": "Sunset gradient"}, {"value": "twilight", "label": "Twilight purple / pink / blue"}, {"value": "fixed", "label": "Fixed color"}]},
+    "fixed_color": {"type": "color", "label": "Fixed rain color", "help": "Used when Color palette is set to Fixed color.", "default": "#00BFFF"},
+    "density": {"type": "range", "label": "Rain density", "min": 1, "max": 1000, "step": 1, "default": 150, "unit": "per 1,000"},
+    "frame_delay": {"type": "range", "label": "Rain speed", "min": 0.01, "max": 0.2, "step": 0.01, "default": 0.04, "unit": "seconds", "inverse": True},
+    "persistence": {"type": "range", "label": "Trail length", "min": 0.1, "max": 0.99, "step": 0.01, "default": 0.75},
+    "trail_length_variance": {"type": "range", "label": "Trail length variance", "help": "Vary individual trail lengths by up to roughly 50% at the maximum.", "min": 0.0, "max": 1.0, "step": 0.01, "default": 0.0},
+    "variable_drop_speed": {"type": "boolean", "label": "Variable drop speeds", "help": "Make individual drops fall at slightly different speeds while keeping their average speed unchanged.", "default": False},
+    "drop_brightness_variance": {"type": "range", "label": "Per-drop brightness variance", "help": "Vary individual drop brightness by up to roughly 50% at the maximum.", "min": 0.0, "max": 1.0, "step": 0.01, "default": 0.0},
+    # Kept hidden so existing saved configurations and API clients continue
+    # to normalize successfully. PixelRain translates them to the palette
+    # settings when no new palette is supplied.
+    "rain_color_mode": {"type": "select", "label": "Legacy raindrop colors", "help": "Compatibility setting.", "default": "rainbow_cycle", "hidden": True, "choices": [{"value": "rainbow_cycle", "label": "Rainbow cycle"}, {"value": "rainbow_gradient", "label": "Rainbow gradient"}, {"value": "fixed", "label": "Fixed color"}]},
+    "rain_fixed_color": {"type": "color", "label": "Legacy fixed raindrop color", "help": "Compatibility setting.", "default": "#00BFFF", "hidden": True},
+    "rainbow_cycle_speed": {"type": "range", "label": "Legacy rainbow cycle speed", "help": "Compatibility setting.", "min": 0.0, "max": 2.0, "step": 0.01, "default": 0.25, "unit": "cycles/sec", "hidden": True},
+    "rainbow_gradient_speed": {"type": "range", "label": "Legacy rainbow gradient speed", "help": "Compatibility setting.", "min": 0.0, "max": 2.0, "step": 0.01, "default": 0.15, "unit": "cycles/sec", "hidden": True},
 }
 
 
@@ -139,7 +147,11 @@ def normalize_settings(schema, values=None, base=None):
         field = schema[key]
         field_type = field["type"]
         if field_type == "select":
-            if value not in {choice["value"] for choice in field["choices"]}:
+            choices = {choice["value"] for choice in field["choices"]}
+            aliases = field.get("aliases", {})
+            if value in aliases:
+                value = aliases[value]
+            if value not in choices:
                 raise ValueError(f"{field['label']} is invalid.")
             result[key] = value
             continue
