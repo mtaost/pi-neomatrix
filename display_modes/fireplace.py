@@ -1,10 +1,8 @@
-"""A warm, animated fireplace with flickering flames and rising embers."""
+"""A warm, animated fireplace using a rising cellular heat simulation."""
 
-import math
 import random
 
 from display_modes import module
-from display_modes.perlinnoise import PerlinNoise
 from mode_settings import FIREPLACE_SETTINGS, hex_to_rgb, normalize_settings
 
 
@@ -18,16 +16,16 @@ PALETTES = {
 
 
 class Fireplace(module.Module):
-    """Render a compact, continuously flickering fireplace scene."""
+    """Render fire by injecting heat at the base and letting it rise and cool."""
 
     LOG_DARK = (45, 16, 8)
     LOG_LIGHT = (105, 39, 13)
 
     def __init__(self, driver, options=None):
         super().__init__(driver)
-        self.phase = 0.0
         self.embers = []
         self.random = random.Random()
+        self.heat = [[0.0 for _ in range(self.width)] for _ in range(max(1, self.height - 2))]
         self.update_settings(options)
 
     def update_settings(self, values=None):
@@ -53,19 +51,83 @@ class Fireplace(module.Module):
             values = PALETTES[self.palette_name]
         return tuple(hex_to_rgb(value) for value in values)
 
-    def _noise(self, x, y):
-        """Return smooth noise in the 0..1 range with optional fine detail."""
-        coarse = PerlinNoise._perlin(x, y)
-        fine = PerlinNoise._perlin(x * 2.4 + 17.0, y * 2.4 - 11.0)
-        value = coarse * (1.0 - self.turbulence) + fine * self.turbulence
-        return min(1.0, max(0.0, 0.5 + value))
-
     def _palette_color(self, value):
         position = min(1.0, max(0.0, value)) * (len(self.palette) - 1)
         index = min(len(self.palette) - 2, int(position))
         amount = position - index
         start, end = self.palette[index], self.palette[index + 1]
         return tuple(round(first + (second - first) * amount) for first, second in zip(start, end))
+
+    def _inject_heat(self):
+        """Create an uneven, flickering bed of heat immediately above the logs."""
+        bottom = len(self.heat) - 1
+        # Broad pulses make coherent flame roots; flicker adds local variation.
+        pulse_width = max(2, round(self.width * (0.12 + (1.0 - self.flame_scale) * 0.18)))
+        pulses = max(1, round(self.width / max(4, pulse_width * 2)))
+        sources = []
+        for _ in range(pulses):
+            sources.append((
+                self.random.randrange(self.width),
+                self.random.uniform(0.68, 1.0),
+                self.random.uniform(max(1.0, pulse_width * 0.6), max(1.1, pulse_width * 1.3)),
+            ))
+
+        for x in range(self.width):
+            base = self.random.uniform(0.20, 0.42)
+            for center, strength, radius in sources:
+                distance = abs(x - center)
+                distance = min(distance, self.width - distance)
+                if distance < radius:
+                    base = max(base, strength * (1.0 - 0.55 * distance / radius))
+            jitter = self.random.uniform(-0.12, 0.12) * self.flicker
+            self.heat[bottom][x] = min(1.0, max(0.0, base + jitter))
+
+    def _advance_heat(self):
+        """Advect heat upward with cooling, diffusion and small lateral drift."""
+        rows = len(self.heat)
+        if rows <= 1:
+            self._inject_heat()
+            return
+
+        old = self.heat
+        new = [[0.0 for _ in range(self.width)] for _ in range(rows)]
+
+        # Higher flame_height means slower cooling and therefore taller flames.
+        cooling = 0.055 + (1.0 - self.flame_height) * 0.18
+        lateral = 0.08 + self.turbulence * 0.22
+
+        for y in range(rows - 1):
+            below_y = min(rows - 1, y + 1)
+            two_below_y = min(rows - 1, y + 2)
+            for x in range(self.width):
+                # Pick a tiny random drift per cell. Unlike scrolling noise this
+                # changes the flame's path rather than translating its texture.
+                drift = self.random.choices((-1, 0, 1), (self.turbulence, 2.0, self.turbulence))[0]
+                source_x = (x + drift) % self.width
+                center = old[below_y][source_x]
+                deeper = old[two_below_y][source_x]
+                left = old[below_y][(source_x - 1) % self.width]
+                right = old[below_y][(source_x + 1) % self.width]
+                value = center * (0.58 - lateral * 0.35)
+                value += deeper * 0.25
+                value += (left + right) * lateral * 0.5
+                value -= cooling * self.random.uniform(0.75, 1.25)
+                new[y][x] = min(1.0, max(0.0, value))
+
+        self.heat = new
+        self._inject_heat()
+
+    def _draw_flames(self):
+        rows = len(self.heat)
+        for y in range(rows):
+            # Suppress weak residual heat so the top of each tongue has a
+            # distinct edge instead of a full-screen haze.
+            height_fraction = (rows - 1 - y) / max(1, rows - 1)
+            threshold = 0.06 + height_fraction * 0.06
+            for x in range(self.width):
+                heat = self.heat[y][x]
+                if heat > threshold:
+                    self.pixels[x, y] = self._palette_color((heat - threshold) / (1.0 - threshold))
 
     def _draw_logs(self):
         if self.height < 2:
@@ -76,30 +138,6 @@ class Fireplace(module.Module):
         if self.width >= 6:
             for x in range(2, self.width - 2):
                 self.pixels[x, self.height - 2] = self.LOG_LIGHT
-
-    def _draw_flames(self):
-        usable_height = max(1, self.height - 3)
-        for x in range(self.width):
-            for y in range(usable_height):
-                from_bottom = (usable_height - 1 - y) / max(1, usable_height - 1)
-                relative_height = from_bottom / self.flame_height
-                if relative_height > 1.0:
-                    continue
-
-                sample_x = (x - self.width / 2) * self.flame_scale + self.phase
-                sample_y = relative_height * 2.2 - self.phase * 0.7
-                noise = self._noise(sample_x, sample_y)
-                width_factor = 1.0 - relative_height * 0.72
-                edge = noise - (1.0 - width_factor) * 0.55 - 0.24
-                if edge <= 0:
-                    glow = (1.0 - relative_height) * (1.0 - noise) * 0.12
-                    if glow > 0.02:
-                        self.pixels[x, y] = self._palette_color(glow)
-                    continue
-
-                heat = (1.0 - relative_height) ** 0.45
-                heat *= min(1.0, edge * (1.8 + self.flicker * 1.8))
-                self.pixels[x, y] = self._palette_color(heat)
 
     def _spawn_embers(self):
         chance = self.ember_density / 100.0 * self.frame_delay * 2.0
@@ -132,10 +170,10 @@ class Fireplace(module.Module):
 
     def step(self):
         self.image.paste((0, 0, 0), (0, 0, self.width, self.height))
+        self._advance_heat()
         self._draw_flames()
         self._draw_logs()
         self._update_embers()
-        self.phase += self.frame_delay * (0.35 + self.flicker * 1.65)
 
     def run(self):
         while not self.should_stop():
