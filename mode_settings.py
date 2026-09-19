@@ -123,6 +123,16 @@ PERLIN_NOISE_SETTINGS = {
     "custom_end_color": {"type": "color", "label": "Custom highlight color", "help": "The brightest color in the custom gradient.", "default": "#B7FF5A"},
 }
 
+
+CITYSCAPE_SETTINGS = {
+    "frame_delay": {"type": "range", "label": "Animation speed", "help": "How often the cityscape is redrawn.", "min": 0.02, "max": 0.2, "step": 0.01, "default": 0.05, "unit": "seconds", "inverse": True},
+    "scroll_speed": {"type": "range", "label": "Scroll speed", "help": "How quickly the skyline travels from right to left.", "min": 0.0, "max": 8.0, "step": 0.1, "default": 1.2, "unit": "cells/sec"},
+    "sky_mode": {"type": "select", "label": "Sky cycle", "help": "Loop through day, sunset, and night, or hold one time of day.", "default": "cycle", "choices": [{"value": "cycle", "label": "Automatic day / sunset / night"}, {"value": "day", "label": "Day"}, {"value": "sunset", "label": "Sunset"}, {"value": "night", "label": "Night"}]},
+    "cycle_duration": {"type": "range", "label": "Cycle duration", "help": "Length of one complete day-to-night loop when Sky cycle is automatic.", "min": 20, "max": 3600, "step": 10, "default": 180, "unit": "seconds"},
+    "building_height": {"type": "range", "label": "Building height", "help": "Controls the tallest foreground buildings relative to the panel height.", "min": 0.35, "max": 0.9, "step": 0.05, "default": 0.65},
+    "window_density": {"type": "range", "label": "Lit windows", "help": "The portion of windows that glow after dark.", "min": 0, "max": 100, "step": 1, "default": 42, "unit": "%"},
+}
+
 def default_settings(schema):
     return {key: field["default"] for key, field in schema.items()}
 

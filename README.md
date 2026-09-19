@@ -118,6 +118,7 @@ Available mode IDs are:
 - `tetris`: Tetris AI
 - `perlin`: Perlin Noise gradient
 - `fireplace`: Fireplace
+- `cityscape`: Infinitely scrolling cityscape with automatic or fixed day, sunset, and night skies
 - `off`: Display Off
 
 ### Start at Boot with systemd
