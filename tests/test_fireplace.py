@@ -41,6 +41,13 @@ class FireplaceTests(unittest.TestCase):
         self.assertNotEqual(mode.pixels[7, 0], (0, 0, 0))
         self.assertEqual(mode.pixels[0, 0], (0, 0, 0))
 
+    def test_extended_flame_height_reduces_but_bounds_cooling(self):
+        normal = Fireplace(FakeDriver(), {"flame_height": 1.0})
+        extended = Fireplace(FakeDriver(), {"flame_height": 1.3})
+
+        self.assertLess(extended._cooling_rate(), normal._cooling_rate())
+        self.assertGreaterEqual(extended._cooling_rate(), 0.025)
+
     def test_supports_curated_and_custom_palettes(self):
         self.assertEqual(len(PALETTES), 5)
         for name in PALETTES:
@@ -52,7 +59,7 @@ class FireplaceTests(unittest.TestCase):
 
     def test_settings_are_validated(self):
         with self.assertRaises(ValueError):
-            normalize_settings(FIREPLACE_SETTINGS, {"flame_height": 1.1})
+            normalize_settings(FIREPLACE_SETTINGS, {"flame_height": 1.31})
         with self.assertRaises(ValueError):
             normalize_settings(FIREPLACE_SETTINGS, {"palette": "unknown"})
 

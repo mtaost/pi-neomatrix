@@ -82,6 +82,12 @@ class Fireplace(module.Module):
             jitter = self.random.uniform(-0.12, 0.12) * self.flicker
             self.heat[bottom][x] = min(1.0, max(0.0, base + jitter))
 
+    def _cooling_rate(self):
+        """Return a bounded cooling rate for the requested flame height."""
+        base_cooling = 0.055 + (1.0 - min(self.flame_height, 1.0)) * 0.18
+        extra_height = max(0.0, self.flame_height - 1.0)
+        return max(0.025, base_cooling - extra_height * 0.10)
+
     def _advance_heat(self):
         """Advect heat upward with cooling, diffusion and small lateral drift."""
         rows = len(self.heat)
@@ -93,7 +99,9 @@ class Fireplace(module.Module):
         new = [[0.0 for _ in range(self.width)] for _ in range(rows)]
 
         # Higher flame_height means slower cooling and therefore taller flames.
-        cooling = 0.055 + (1.0 - self.flame_height) * 0.18
+        # Values above 1.0 use the extended control range but retain a cooling
+        # floor, preventing heat from accumulating into a full-panel glow.
+        cooling = self._cooling_rate()
         lateral = 0.08 + self.turbulence * 0.22
 
         for y in range(rows - 1):

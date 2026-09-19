@@ -7,6 +7,8 @@ from mode_settings import (
     PIXEL_STARS_SETTINGS,
     SPECTRUM_SETTINGS,
     TETRIS_SETTINGS,
+    normalize_settings,
+    FIREPLACE_SETTINGS,
 )
 
 
@@ -27,6 +29,12 @@ class SpeedSliderSettingsTests(unittest.TestCase):
             [choice["value"] for choice in SPECTRUM_SETTINGS["palette"]["choices"]],
             ["classic", "rainbow_gradient", "ocean", "sunset", "fixed"],
         )
+
+    def test_fireplace_supports_extended_flame_height(self):
+        settings = normalize_settings(FIREPLACE_SETTINGS, {"flame_height": 1.3})
+        self.assertEqual(settings["flame_height"], 1.3)
+        with self.assertRaises(ValueError):
+            normalize_settings(FIREPLACE_SETTINGS, {"flame_height": 1.31})
 
 
 if __name__ == "__main__":
