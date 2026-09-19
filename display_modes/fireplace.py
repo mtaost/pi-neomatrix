@@ -121,10 +121,14 @@ class Fireplace(module.Module):
         rows = len(self.heat)
         for y in range(rows):
             # Suppress weak residual heat so the top of each tongue has a
-            # distinct edge instead of a full-screen haze.
+            # distinct edge instead of a full-screen haze.  Raise that cutoff
+            # toward the upper outside corners: a 16-pixel fire needs a strong
+            # taper to read as flames instead of a rectangular wall of heat.
             height_fraction = (rows - 1 - y) / max(1, rows - 1)
-            threshold = 0.06 + height_fraction * 0.06
             for x in range(self.width):
+                distance_from_center = abs((x + 0.5) / self.width - 0.5) * 2.0
+                edge_taper = height_fraction * 0.18 * distance_from_center ** 1.5
+                threshold = 0.06 + height_fraction * 0.06 + edge_taper
                 heat = self.heat[y][x]
                 if heat > threshold:
                     self.pixels[x, y] = self._palette_color((heat - threshold) / (1.0 - threshold))
