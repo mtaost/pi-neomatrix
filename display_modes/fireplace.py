@@ -14,6 +14,8 @@ PALETTES = {
     "neon": ("#18002E", "#B00070", "#FF3D71", "#FFD166"),
 }
 
+SHIFTING_PALETTES = ("classic", "candle", "blue_flame", "neon")
+
 
 class Fireplace(module.Module):
     """Render fire by injecting heat at the base and letting it rise and cool."""
@@ -27,6 +29,7 @@ class Fireplace(module.Module):
         self.random = random.Random()
         self.heat = [[0.0 for _ in range(self.width)] for _ in range(max(1, self.height - 2))]
         self.fuel = [0.0 for _ in range(self.width)]
+        self.color_phase = 0.0
         self.update_settings(options)
 
     def update_settings(self, values=None):
@@ -38,10 +41,13 @@ class Fireplace(module.Module):
         self.turbulence = self.settings["turbulence"]
         self.ember_density = self.settings["ember_density"]
         self.palette_name = self.settings["palette"]
+        self.color_shift_speed = self.settings["color_shift_speed"]
         self.palette = self._load_palette()
         return dict(self.settings)
 
     def _load_palette(self):
+        if self.palette_name == "shifting":
+            return self._shifting_palette()
         if self.palette_name == "custom":
             values = (
                 self.settings["custom_shadow_color"],
@@ -51,6 +57,23 @@ class Fireplace(module.Module):
         else:
             values = PALETTES[self.palette_name]
         return tuple(hex_to_rgb(value) for value in values)
+
+    def _shifting_palette(self):
+        position = (self.color_phase % 1.0) * len(SHIFTING_PALETTES)
+        start_index = int(position) % len(SHIFTING_PALETTES)
+        amount = position - int(position)
+        start = tuple(hex_to_rgb(value) for value in PALETTES[SHIFTING_PALETTES[start_index]])
+        end = tuple(hex_to_rgb(value) for value in PALETTES[SHIFTING_PALETTES[(start_index + 1) % len(SHIFTING_PALETTES)]])
+        return tuple(
+            tuple(round(first + (second - first) * amount) for first, second in zip(start_color, end_color))
+            for start_color, end_color in zip(start, end)
+        )
+
+    def _advance_palette(self, elapsed):
+        if self.palette_name != "shifting":
+            return
+        self.color_phase = (self.color_phase + elapsed * self.color_shift_speed) % 1.0
+        self.palette = self._load_palette()
 
     def _palette_color(self, value):
         position = min(1.0, max(0.0, value)) * (len(self.palette) - 1)
@@ -188,6 +211,7 @@ class Fireplace(module.Module):
 
     def step(self):
         self.image.paste((0, 0, 0), (0, 0, self.width, self.height))
+        self._advance_palette(self.frame_delay)
         self._advance_heat()
         self._draw_flames()
         self._draw_logs()

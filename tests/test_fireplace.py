@@ -67,6 +67,14 @@ class FireplaceTests(unittest.TestCase):
         mode = Fireplace(FakeDriver(), {"palette": "custom", "custom_shadow_color": "#102030", "custom_mid_color": "#405060", "custom_highlight_color": "#708090"})
         self.assertEqual(mode.palette, ((16, 32, 48), (64, 80, 96), (112, 128, 144)))
 
+    def test_shifting_palette_cycles_through_fire_colors(self):
+        mode = Fireplace(FakeDriver(), {"palette": "shifting", "color_shift_speed": 0.5})
+        red_palette = mode.palette
+        mode._advance_palette(1.0)
+
+        self.assertNotEqual(mode.palette, red_palette)
+        self.assertEqual(mode.palette, tuple(tuple(int(value[index:index + 2], 16) for index in (1, 3, 5)) for value in PALETTES["blue_flame"]))
+
     def test_settings_are_validated(self):
         with self.assertRaises(ValueError):
             normalize_settings(FIREPLACE_SETTINGS, {"flame_height": 1.31})
