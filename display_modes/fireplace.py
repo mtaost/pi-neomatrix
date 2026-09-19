@@ -135,6 +135,12 @@ class Fireplace(module.Module):
             height_fraction = (rows - 1 - y) / max(1, rows - 1)
             for x in range(self.width):
                 distance_from_center = abs((x + 0.5) / self.width - 0.5) * 2.0
+                # At this scale the overall silhouette needs an explicit apex.
+                # The center can reach the top, while the outer columns end
+                # lower in a broad triangular profile.
+                peak_height = 0.72 + 0.28 * (1.0 - distance_from_center)
+                if height_fraction > peak_height:
+                    continue
                 edge_taper = height_fraction * 0.18 * distance_from_center ** 1.5
                 threshold = 0.06 + height_fraction * 0.06 + edge_taper
                 heat = self.heat[y][x]

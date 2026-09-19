@@ -35,11 +35,11 @@ class FireplaceTests(unittest.TestCase):
 
     def test_flame_edge_tapers_as_heat_rises(self):
         mode = Fireplace(FakeDriver(), {"ember_density": 0})
-        mode.heat[0] = [0.22] * mode.width
+        mode.heat[1] = [0.22] * mode.width
         mode._draw_flames()
 
-        self.assertNotEqual(mode.pixels[7, 0], (0, 0, 0))
-        self.assertEqual(mode.pixels[0, 0], (0, 0, 0))
+        self.assertNotEqual(mode.pixels[7, 1], (0, 0, 0))
+        self.assertEqual(mode.pixels[0, 1], (0, 0, 0))
 
     def test_extended_flame_height_reduces_but_bounds_cooling(self):
         normal = Fireplace(FakeDriver(), {"flame_height": 1.0})
