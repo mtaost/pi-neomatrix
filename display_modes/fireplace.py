@@ -26,6 +26,7 @@ class Fireplace(module.Module):
         self.embers = []
         self.random = random.Random()
         self.heat = [[0.0 for _ in range(self.width)] for _ in range(max(1, self.height - 2))]
+        self.fuel = [0.0 for _ in range(self.width)]
         self.update_settings(options)
 
     def update_settings(self, values=None):
@@ -61,26 +62,31 @@ class Fireplace(module.Module):
     def _inject_heat(self):
         """Create an uneven, flickering bed of heat immediately above the logs."""
         bottom = len(self.heat) - 1
-        # Broad pulses make coherent flame roots; flicker adds local variation.
+        # Broad, persistent pulses make coherent flame roots instead of a
+        # full-width, frame-by-frame random heat band.
         pulse_width = max(2, round(self.width * (0.12 + (1.0 - self.flame_scale) * 0.18)))
         pulses = max(1, round(self.width / max(4, pulse_width * 2)))
         sources = []
         for _ in range(pulses):
+            center = self.random.triangular(1, max(1, self.width - 2), (self.width - 1) / 2)
             sources.append((
-                self.random.randrange(self.width),
+                center,
                 self.random.uniform(0.68, 1.0),
                 self.random.uniform(max(1.0, pulse_width * 0.6), max(1.1, pulse_width * 1.3)),
             ))
 
         for x in range(self.width):
-            base = self.random.uniform(0.20, 0.42)
+            distance_from_center = abs((x + 0.5) / self.width - 0.5) * 2.0
+            base = self.random.uniform(0.08, 0.20) * (1.0 - 0.55 * distance_from_center)
             for center, strength, radius in sources:
                 distance = abs(x - center)
-                distance = min(distance, self.width - distance)
                 if distance < radius:
                     base = max(base, strength * (1.0 - 0.55 * distance / radius))
             jitter = self.random.uniform(-0.12, 0.12) * self.flicker
-            self.heat[bottom][x] = min(1.0, max(0.0, base + jitter))
+            target = min(1.0, max(0.0, base + jitter))
+            blend = 0.25 + self.flicker * 0.10
+            self.fuel[x] += (target - self.fuel[x]) * blend
+            self.heat[bottom][x] = self.fuel[x]
 
     def _cooling_rate(self):
         """Return a bounded cooling rate for the requested flame height."""
@@ -135,12 +141,6 @@ class Fireplace(module.Module):
             height_fraction = (rows - 1 - y) / max(1, rows - 1)
             for x in range(self.width):
                 distance_from_center = abs((x + 0.5) / self.width - 0.5) * 2.0
-                # At this scale the overall silhouette needs an explicit apex.
-                # The center can reach the top, while the outer columns end
-                # much lower in a clearly readable triangular profile.
-                peak_height = 0.10 + 0.90 * (1.0 - distance_from_center)
-                if height_fraction > peak_height:
-                    continue
                 edge_taper = height_fraction * 0.18 * distance_from_center ** 1.5
                 threshold = 0.06 + height_fraction * 0.06 + edge_taper
                 heat = self.heat[y][x]
