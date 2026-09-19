@@ -12,12 +12,26 @@ class FakeDriver:
 class FireplaceTests(unittest.TestCase):
     def test_renders_flames_and_keeps_a_log_bed(self):
         mode = Fireplace(FakeDriver(), {"ember_density": 0})
-        mode.step()
+        # The cellular simulation needs a few frames for heat to rise.
+        for _ in range(12):
+            mode.step()
         pixels = list(mode.image.getdata())
         self.assertEqual(mode.image.size, (16, 16))
         self.assertGreater(len(set(pixels)), 5)
         self.assertEqual(mode.pixels[0, 15], mode.LOG_DARK)
-        self.assertTrue(any(pixel in mode.palette for pixel in pixels))
+        self.assertTrue(any(pixel != (0, 0, 0) for pixel in pixels[:14 * 16]))
+
+    def test_heat_rises_from_bottom_without_perlin_phase(self):
+        mode = Fireplace(FakeDriver(), {"ember_density": 0})
+        self.assertEqual(len(mode.heat), 14)
+        self.assertTrue(all(value == 0 for row in mode.heat for value in row))
+        mode.step()
+        self.assertTrue(any(value > 0 for value in mode.heat[-1]))
+        self.assertFalse(hasattr(mode, "phase"))
+
+        for _ in range(8):
+            mode.step()
+        self.assertTrue(any(value > 0 for row in mode.heat[:-1] for value in row))
 
     def test_supports_curated_and_custom_palettes(self):
         self.assertEqual(len(PALETTES), 5)
