@@ -41,6 +41,14 @@ class FireplaceTests(unittest.TestCase):
         self.assertNotEqual(mode.pixels[7, 1], (0, 0, 0))
         self.assertEqual(mode.pixels[0, 1], (0, 0, 0))
 
+    def test_peak_is_substantially_taller_than_the_sides(self):
+        mode = Fireplace(FakeDriver(), {"ember_density": 0})
+        mode.heat[6] = [0.8] * mode.width
+        mode._draw_flames()
+
+        self.assertNotEqual(mode.pixels[7, 6], (0, 0, 0))
+        self.assertEqual(mode.pixels[0, 6], (0, 0, 0))
+
     def test_extended_flame_height_reduces_but_bounds_cooling(self):
         normal = Fireplace(FakeDriver(), {"flame_height": 1.0})
         extended = Fireplace(FakeDriver(), {"flame_height": 1.3})

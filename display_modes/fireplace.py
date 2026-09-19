@@ -137,8 +137,8 @@ class Fireplace(module.Module):
                 distance_from_center = abs((x + 0.5) / self.width - 0.5) * 2.0
                 # At this scale the overall silhouette needs an explicit apex.
                 # The center can reach the top, while the outer columns end
-                # lower in a broad triangular profile.
-                peak_height = 0.72 + 0.28 * (1.0 - distance_from_center)
+                # much lower in a clearly readable triangular profile.
+                peak_height = 0.42 + 0.58 * (1.0 - distance_from_center)
                 if height_fraction > peak_height:
                     continue
                 edge_taper = height_fraction * 0.18 * distance_from_center ** 1.5
